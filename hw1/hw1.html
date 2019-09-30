@@ -67,7 +67,7 @@
       }));
       car.add(mesh)
       mesh.rotation.y=Math.PI;
-      mesh.position.x=10;
+      //mesh.position.x=5;
       return car;
     }
 
@@ -244,7 +244,8 @@
           scene.add(triangle1());
           car=buildcar();
           scene.add(car);
-          car.position.x=80;
+          car.position.x=90;
+          //car.rotation.z=-Math.PI/4;
         }
 
         function onWindowResize() {
@@ -267,6 +268,44 @@
           }*/
 
           //if(car.position.x==80&&turn==false)car.rotation.y=
+         if(turn==false){
+         
+          if(car.position.x<=90&&car.position.x>=40){
+            car.position.x-=1;
+          }
+        if(car.position.x==40)car.rotation.z=-Math.PI/4;
+        if(car.position.x<=40&&car.position.x>=20){car.position.y+=1
+          car.position.x-=1
+          }
+          if(car.position.x==20)car.rotation.z=0
+          if(car.position.x<=20&&car.position.x>=-20)car.position.x-=1;
+          if(car.position.x==-20)car.rotation.z=Math.PI/7;
+          if(car.position.x<=-20&&car.position.x>=-60){car.position.y-=0.5;
+          car.position.x-=1;
+          }
+        if(car.position.x==-60)car.rotation.z=0
+        if(car.position.x<=-60&&car.position.x>=-100)car.position.x-=1;
+       if(car.position.x==-100)turn=true;
+        }
+
+        else{
+        if(car.position.x==-100)car.rotation.y=Math.PI;
+        if(car.position.x>=-100&&car.position.x<=-60)car.position.x+=1;
+        if(car.position.x==-60)car.rotation.z=-Math.PI/7
+        if(car.position.x>=-60&&car.position.x<=-20){
+          car.position.y+=0.5;
+          car.position.x+=1;
+        }
+          if(car.position.x==-20)car.rotation.z=0
+          if(car.position.x<=20&&car.position.x>=-20)car.position.x+=1;
+          if(car.position.x==20)car.rotation.z=Math.PI/4;
+          if(car.position.x<=40&&car.position.x>=20){car.position.y-=1
+          car.position.x+=1
+          }
+          if(car.position.x==40)car.rotation.z=0;
+          if(car.position.x>=40&&car.position.x<=80)car.position.x+=1;
+          if(car.position.x==80){turn=false;car.rotation.y=0;}
+        }
           var dt = clock.getDelta();
         
 
