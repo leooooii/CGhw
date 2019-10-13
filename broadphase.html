@@ -28,10 +28,20 @@ body {
 
 
     <script>
-
 javascript:(function(){var script=document.createElement('script');script.onload=function(){var stats=new Stats();document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='//mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);})()
 
-var baardphase = [];
+//var baardphase = [];
+
+class broadphase{
+  constructor(pointx,pointy,num){
+  this.pointx=pointx;
+  this.pointy=pointy
+  this.num=num;
+  this.isBeg=true;
+  this.isEnd=false;
+  }
+   
+}
 
 class AABB {
   constructor(pos, vel, halfSize) {
@@ -74,6 +84,7 @@ class AABB {
 
 var camera, scene, renderer;
 var bbs = [];
+var bp=[];
 var collide=[];
 init();
 animate();
@@ -107,12 +118,17 @@ function init() {
 
   /////////////////////////////////////////////////
   let speed = 5;
-  let blocks = 15;
+  let blocks = 2;
   for (var i = 0; i < blocks; i++)
   bbs.push ( new AABB(new THREE.Vector3(myRandom()*40,myRandom()*40,0), new THREE.Vector3(myRandom()*speed, myRandom()*speed,0), new THREE.Vector3(2, 1, 0)) );
+  //console.log(bbs[0].halfSize)
   for (let i = 0; i < bbs.length; i++) 
 {
   collide[i]=0;
+}
+  for (let i = 0; i < bbs.length; i++) 
+{
+  bp.push(new broadphase(bbs[i].min.x,bbs[i].min.y,i));
 }
 }
 
@@ -127,7 +143,8 @@ function onWindowResize() {
 }
 
 
-
+var temp;
+var num1,num2;
 function animate() {
   requestAnimationFrame(animate);
   render();
@@ -137,8 +154,40 @@ function animate() {
   for (let i = 0; i < bbs.length; i++) 
   {
     bbs[i].update(0.1);
+    bp[i].pointx=bbs[i].min.x;
+    bp[i].pointy=bbs[i].min.y;
+    for(let j=1;j<bbs.length;j++){
+       for(let x=j-1;x>=0;x--){
+       if(bp[j].pointx<bp[x].pointx){
+       temp=bp[j].num;
+       bp[j].num=bp[x].num;
+       bp[x].num=temp;
+       num1=bp[j].num;
+       num2=bp[x].num;
+       bp[j].pointx=bbs[num1].min.x;
+       bp[j].pointy=bbs[num1].min.y;
+       bp[x].pointx=bbs[num2].min.x;
+       bp[x].pointy=bbs[num2].min.y;
+       }
+       }
+    }
+    for(let j=1;j<bbs.length;j++){
+     if(bp[i].pointx+4>bp[j].pointx){
+        bbs[i].box.material.color.set ('red');
+        bbs[j].box.material.color.set ('red');
+     }
+    else {
+        bbs[i].box.material.color.set ('white');
+        bbs[j].box.material.color.set ('white');
+    }
+    }
+     
     
-for (let j = i+1; j < bbs.length ; j++) 
+    
+    
+    
+    
+/*for (let j = i+1; j < bbs.length ; j++) 
   {    
       if (bbs[i].collide(bbs[j])) {
         bbs[i].box.material.color.set ('red');
@@ -151,7 +200,7 @@ for (let j = i+1; j < bbs.length ; j++)
         bbs[j].box.material.color.set ('white');
       }
     }
-       collide[i] = 0;
+       collide[i] = 0;*/
     }
     
 }
