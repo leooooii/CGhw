@@ -73,6 +73,7 @@ function init() {
 
   camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 2000);
   camera.position.z = 100;
+  camera.position.y=100;
   controls = new THREE.OrbitControls(camera, renderer.domElement);
 
   // scene
@@ -80,7 +81,7 @@ function init() {
   scene = new THREE.Scene();
 
   var ambient = new THREE.AmbientLight(0xffffff);
-  scene.add(ambient);
+ // scene.add(ambient);
 	
   gridxz = new THREE.GridHelper (200, 20,'red','black');
   scene.add (gridxz);
@@ -92,13 +93,18 @@ function init() {
   directionalLight.position.set(0, 0, 1).normalize();
   scene.add(directionalLight);
 
-  var pointLight = new THREE.PointLight (0xffffff);
-  pointLight.position.set (100,200,-100);
-  scene.add (pointLight);
-	
+  var  light = new THREE.PointLight(0xffffff);
+  light.position.set(50,300, -50);
+  scene.add(light);
   window.addEventListener('resize', onWindowResize, false);
   readModel();
- 
+  let loader = new THREE.TextureLoader();
+  loader.crossOrigin = '';
+  var  texture = loader.load('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTagI5kKB9r6aCG6oBTgSUT_qe0f1dsbCYo-cyVLk9udcNdTTOS');
+ // texture.repeat.set(2, 2);
+  var floor = new THREE.Mesh (new THREE.PlaneGeometry(200,200), new THREE.MeshLambertMaterial({side: THREE.DoubleSide,map:texture}));
+  floor.rotation.x=-Math.PI/2;
+  scene.add(floor);
   ///////////////////////////////////////////////////////////////////	
 	function onWindowResize() {
 
@@ -114,7 +120,7 @@ function init() {
   
 }
 
-function readModel ( targetSize=40) {
+function readModel ( targetSize=20) {
 
   var onProgress = function(xhr) {
     if (xhr.lengthComputable) {
@@ -126,23 +132,29 @@ function readModel ( targetSize=40) {
   var onError = function(xhr) {};
 
   var mtlLoader = new THREE.MTLLoader();
-  mtlLoader.setPath('tank/');
+  mtlLoader.setPath('https://leooooii.github.io/CGhw/hw2/tank/');
   mtlLoader.load('tank1'+'.mtl', function(materials) {
 
     materials.preload();
 
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials(materials);
-    objLoader.setPath('tank/');
+    objLoader.setPath('https://leooooii.github.io/CGhw/hw2/tank/');
     objLoader.load('tank1'+'.obj', function(object) {
 		
 		let theObject =  unitize (object, targetSize);
 		//theObject.add ( new THREE.BoxHelper (theObject) )
 		theObject.name = 'OBJ'
-		scene.add (theObject);
-		
-		theObject.setRotationFromEuler (new THREE.Euler (3.1416/2, 0, -3.1416/2, 'ZYX'))
+		//scene.add (theObject);
+		 
+		//theObject.setRotationFromEuler (new THREE.Euler (3.1416/2, 0, -3.1416/2, 'ZYX'))
+        theObject.rotation.y=-Math.PI/2;
+        theObject.position.y=3.5
+        var localPlane = new THREE.Plane( new THREE.Vector3( 0,  1, 0 ), 0 );
+        theObject.children[0].children[0].material[0].clippingPlanes = [localPlane];
 
+        scene.add(theObject);
+        
     }, onProgress, onError);
 
   });
@@ -164,25 +176,28 @@ function unitize (object, targetSize) {
 	var center = new THREE.Vector3();
 	center.addVectors(box3.max, box3.min).multiplyScalar (0.5);
 	
-	console.log ('center: ' + center.x + ', '+center.y + ', '+center.z );
-	console.log ('size: ' + size.x + ', ' +  size.y + ', '+size.z );
+	//console.log ('center: ' + center.x + ', '+center.y + ', '+center.z );
+	//console.log ('size: ' + size.x + ', ' +  size.y + ', '+size.z );
 	
 	// uniform scaling according to objSize
 	var objSize = Math.max (size.x, size.y, size.z);
 	var scaleSet = targetSize/objSize;
 				
 	var theObject =  new THREE.Object3D();
+
 	theObject.add (object);
 	object.scale.set (scaleSet, scaleSet, scaleSet);
 	object.position.set (-center.x*scaleSet, -center.y*scaleSet, -center.z*scaleSet);
-	theObject.rotation.x=Math.PI/2;
+    
 	return theObject;
 			
 }
 
-
+var angel=0;
 function animate() {
-
+	angel+=0.1;
+	if(theObject != undefined )theObject.rotation.x=angel;
+	renderer.localClippingEnabled = true;
   requestAnimationFrame(animate);
   render();
 
