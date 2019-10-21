@@ -43,8 +43,8 @@
 	
 <script>
 var camera, scene, renderer;
+var tankhead,tankbody;
 var theObject;
-
 var mouseX = 0,
   mouseY = 0;
 
@@ -98,6 +98,7 @@ function init() {
   scene.add(light);
   window.addEventListener('resize', onWindowResize, false);
   readModel();
+  readTpose();
   let loader = new THREE.TextureLoader();
   loader.crossOrigin = '';
   var  texture = loader.load('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTagI5kKB9r6aCG6oBTgSUT_qe0f1dsbCYo-cyVLk9udcNdTTOS');
@@ -120,7 +121,7 @@ function init() {
   
 }
 
-function readModel ( targetSize=20) {
+function readModel ( targetSize=40) {
 
   var onProgress = function(xhr) {
     if (xhr.lengthComputable) {
@@ -142,16 +143,21 @@ function readModel ( targetSize=20) {
     objLoader.setPath('https://leooooii.github.io/CGhw/hw2/tank/');
     objLoader.load('tank1'+'.obj', function(object) {
 		
-		let theObject =  unitize (object, targetSize);
+	    theObject =  unitize (object, targetSize);
+	    //theObject =  unitize (object, targetSize);
 		//theObject.add ( new THREE.BoxHelper (theObject) )
 		theObject.name = 'OBJ'
+
 		//scene.add (theObject);
 		 
 		//theObject.setRotationFromEuler (new THREE.Euler (3.1416/2, 0, -3.1416/2, 'ZYX'))
-        theObject.rotation.y=-Math.PI/2;
-        theObject.position.y=3.5
-        var localPlane = new THREE.Plane( new THREE.Vector3( 0,  1, 0 ), 0 );
-        theObject.children[0].children[0].material[0].clippingPlanes = [localPlane];
+
+        //theObject.rotation.y=-Math.PI/2;
+        theObject.position.y=7;
+      //  tankbody.position.y=7;
+      /*  var localPlane = new THREE.Plane( new THREE.Vector3( 0,  1, 0 ), 0 );
+        for(let i=0;i<9;i++)
+        tankhead.children[0].children[0].material[i].clippingPlanes = [localPlane];*/
 
         scene.add(theObject);
         
@@ -161,6 +167,47 @@ function readModel ( targetSize=20) {
 
 }
 
+function readTpose ( targetSize=10) {
+
+  var onProgress = function(xhr) {
+    if (xhr.lengthComputable) {
+      var percentComplete = xhr.loaded / xhr.total * 100;
+      console.log(Math.round(percentComplete, 2) + '% downloaded');
+    }
+  };
+
+  var onError = function(xhr) {};
+
+  var mtlLoader = new THREE.MTLLoader();
+  mtlLoader.setPath('https://leooooii.github.io/CGhw/hw2/Aladdin/');
+  mtlLoader.load('Aladdin'+'.mtl', function(materials) {
+
+    materials.preload();
+
+    var objLoader = new THREE.OBJLoader();
+    objLoader.setMaterials(materials);
+    objLoader.setPath('https://leooooii.github.io/CGhw/hw2/Aladdin/');
+    objLoader.load('Aladdin'+'.obj', function(object) {
+		
+		let theObject =  unitize (object, targetSize);
+		//theObject.add ( new THREE.BoxHelper (theObject) )
+		theObject.name = 'OBJ'
+		//scene.add (theObject);
+		 
+		//theObject.setRotationFromEuler (new THREE.Euler (3.1416/2, 0, -3.1416/2, 'ZYX'))
+       // theObject.rotation.y=-Math.PI/2;
+        theObject.position.y=5;
+        theObject.position.z=40;
+      //  var localPlane = new THREE.Plane( new THREE.Vector3( 0,  1, 0 ), 0 );
+       // theObject.children[0].children[0].material[0].clippingPlanes = [localPlane];*/
+
+        scene.add(theObject);
+        
+    }, onProgress, onError);
+
+  });
+
+}
 
 ////////////////////////////////////////
 // wrap an Object3D around the given object
@@ -195,8 +242,18 @@ function unitize (object, targetSize) {
 
 var angel=0;
 function animate() {
-	angel+=0.1;
-	if(theObject != undefined )theObject.rotation.x=angel;
+	angel+=0.01;
+	 var localPlane1 = new THREE.Plane( new THREE.Vector3( 0,  1, 0 ), -8.5 );
+     var localPlane2 =new THREE.Plane( new THREE.Vector3( 0,  -1, 0 ), 8.5 );
+     var localPlane3 =new THREE.Plane( new THREE.Vector3( 1,  0, 0 ), -5.5 );
+
+	if(theObject != undefined ) {
+ 		 for(let i=0;i<9;i++)
+        theObject.children[0].children[0].material[i].clippingPlanes = [localPlane1];
+		theObject.rotation.y=angel;
+
+	}
+
 	renderer.localClippingEnabled = true;
   requestAnimationFrame(animate);
   render();
