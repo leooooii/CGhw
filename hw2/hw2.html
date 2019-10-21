@@ -44,6 +44,7 @@
 <script>
 var camera, scene, renderer;
 var tankhead,tankbody;
+var Thead,body,leftarm,rightarm;
 var theObject;
 var mouseX = 0,
   mouseY = 0;
@@ -99,6 +100,7 @@ function init() {
   window.addEventListener('resize', onWindowResize, false);
   readModel();
   readTpose();
+  readbody();
   let loader = new THREE.TextureLoader();
   loader.crossOrigin = '';
   var  texture = loader.load('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTagI5kKB9r6aCG6oBTgSUT_qe0f1dsbCYo-cyVLk9udcNdTTOS');
@@ -143,23 +145,69 @@ function readModel ( targetSize=40) {
     objLoader.setPath('https://leooooii.github.io/CGhw/hw2/tank/');
     objLoader.load('tank1'+'.obj', function(object) {
 		
-	    theObject =  unitize (object, targetSize);
+	    tankhead =  unitize (object, targetSize);
 	    //theObject =  unitize (object, targetSize);
 		//theObject.add ( new THREE.BoxHelper (theObject) )
-		theObject.name = 'OBJ'
+		tankhead.name = 'OBJ'
 
 		//scene.add (theObject);
 		 
 		//theObject.setRotationFromEuler (new THREE.Euler (3.1416/2, 0, -3.1416/2, 'ZYX'))
 
         //theObject.rotation.y=-Math.PI/2;
-        theObject.position.y=7;
+        tankhead.position.y=7;
       //  tankbody.position.y=7;
       /*  var localPlane = new THREE.Plane( new THREE.Vector3( 0,  1, 0 ), 0 );
         for(let i=0;i<9;i++)
         tankhead.children[0].children[0].material[i].clippingPlanes = [localPlane];*/
 
-        scene.add(theObject);
+        scene.add(tankhead);
+        
+    }, onProgress, onError);
+
+  });
+
+}
+
+function readbody ( targetSize=40) {
+
+  var onProgress = function(xhr) {
+    if (xhr.lengthComputable) {
+      var percentComplete = xhr.loaded / xhr.total * 100;
+      console.log(Math.round(percentComplete, 2) + '% downloaded');
+    }
+  };
+
+  var onError = function(xhr) {};
+
+  var mtlLoader = new THREE.MTLLoader();
+  mtlLoader.setPath('https://leooooii.github.io/CGhw/hw2/tank/');
+  mtlLoader.load('tank1'+'.mtl', function(materials) {
+
+    materials.preload();
+
+    var objLoader = new THREE.OBJLoader();
+    objLoader.setMaterials(materials);
+    objLoader.setPath('https://leooooii.github.io/CGhw/hw2/tank/');
+    objLoader.load('tank1'+'.obj', function(object) {
+		
+	    tankbody =  unitize (object, targetSize);
+	    //theObject =  unitize (object, targetSize);
+		//theObject.add ( new THREE.BoxHelper (theObject) )
+		tankbody.name = 'OBJ'
+
+		//scene.add (theObject);
+		 
+		//theObject.setRotationFromEuler (new THREE.Euler (3.1416/2, 0, -3.1416/2, 'ZYX'))
+
+        //theObject.rotation.y=-Math.PI/2;
+        tankbody.position.y=7;
+      //  tankbody.position.y=7;
+      /*  var localPlane = new THREE.Plane( new THREE.Vector3( 0,  1, 0 ), 0 );
+        for(let i=0;i<9;i++)
+        tankhead.children[0].children[0].material[i].clippingPlanes = [localPlane];*/
+
+        scene.add(tankbody);
         
     }, onProgress, onError);
 
@@ -189,19 +237,19 @@ function readTpose ( targetSize=10) {
     objLoader.setPath('https://leooooii.github.io/CGhw/hw2/Aladdin/');
     objLoader.load('Aladdin'+'.obj', function(object) {
 		
-		let theObject =  unitize (object, targetSize);
+		Thead =  unitize (object, targetSize);
 		//theObject.add ( new THREE.BoxHelper (theObject) )
-		theObject.name = 'OBJ'
+		Thead.name = 'OBJ'
 		//scene.add (theObject);
 		 
 		//theObject.setRotationFromEuler (new THREE.Euler (3.1416/2, 0, -3.1416/2, 'ZYX'))
        // theObject.rotation.y=-Math.PI/2;
-        theObject.position.y=5;
-        theObject.position.z=40;
+        Thead.position.y=5;
+        Thead.position.z=40;
       //  var localPlane = new THREE.Plane( new THREE.Vector3( 0,  1, 0 ), 0 );
        // theObject.children[0].children[0].material[0].clippingPlanes = [localPlane];*/
 
-        scene.add(theObject);
+        scene.add(Thead);
         
     }, onProgress, onError);
 
@@ -247,12 +295,24 @@ function animate() {
      var localPlane2 =new THREE.Plane( new THREE.Vector3( 0,  -1, 0 ), 8.5 );
      var localPlane3 =new THREE.Plane( new THREE.Vector3( 1,  0, 0 ), -5.5 );
 
-	if(theObject != undefined ) {
+	if(tankhead != undefined ) {
+		//console.log(tankhead.children[0].children[0]);
+		 console.log(tankhead.children[0].children[0]);
  		 for(let i=0;i<9;i++)
-        theObject.children[0].children[0].material[i].clippingPlanes = [localPlane1];
-		theObject.rotation.y=angel;
-
+        tankhead.children[0].children[0].material[i].clippingPlanes = [localPlane1];
+		tankhead.rotation.y=angel;
 	}
+		if(tankbody != undefined ) {
+ 		 for(let i=0;i<9;i++)
+        tankbody.children[0].children[0].material[i].clippingPlanes = [localPlane2];
+		tankbody.rotation.y=-angel;
+    }
+    	if(Thead != undefined ) {
+    	console.log(Thead.children[0].children[1]);
+ 		
+    }
+
+
 
 	renderer.localClippingEnabled = true;
   requestAnimationFrame(animate);
