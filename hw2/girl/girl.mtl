@@ -1,0 +1,23 @@
+# File produced by Open Asset Import Library (http://www.assimp.sf.net)
+# (assimp v3.1.187496374)
+
+newmtl hair_color_mat
+Kd 0.462366 0.462366 0.462366
+Ka 0 0 0
+Ks 0.2 0.2 0.2
+Ke 0 0 0
+d 1
+Ns 50
+illum 2
+map_Kd hair_color_mat.png
+
+newmtl asian_body
+Kd 1 1 1
+Ka 0 0 0
+Ks 0.2 0.2 0.2
+Ke 0 0 0
+d 1
+Ns 50
+illum 2
+map_Kd asian_body_color_mat.png
+
