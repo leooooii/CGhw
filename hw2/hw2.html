@@ -31,6 +31,7 @@
 <body> 
 	<div id="info">hw2
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/107/three.min.js"></script>
 	<script src="https://threejs.org/build/three.min.js"></script>
 	<script src="https://threejs.org/examples/js/controls/OrbitControls.js">
 	</script>
@@ -60,7 +61,7 @@ var gcontrol;
 var tankx=0,tankz=0,cannon=0,body=0;
 var clock = new THREE.Clock();
 var period =10;
-
+var box;
 
 var pose1={
       tankx: 0,
@@ -174,8 +175,6 @@ function init() {
 
   scene = new THREE.Scene();
 
-  var ambient = new THREE.AmbientLight(0xffffff);
- //scene.add(ambient);
 	
   gridxz = new THREE.GridHelper (200, 20,'red','black');
   //scene.add (gridxz);
@@ -184,27 +183,49 @@ function init() {
  // scene.add (axis);
   	
   var directionalLight = new THREE.DirectionalLight(0xffffff);
-  directionalLight.position.set(0, 0, 1).normalize();
+  directionalLight.position.set(10, 5, 1).normalize();
   scene.add(directionalLight);
 
   var  light = new THREE.PointLight(0xffffff);
   light.position.set(50,300, -50);
     // shadow map settings
-    light.castShadow = true;
-    scene.add(light);
+  light.castShadow = true;
+  scene.add(light);
+  light.shadow.mapSize.width = 1024;
+  light.shadow.mapSize.height = 1024;
+  light.shadow.camera.near = 10;
+  light.shadow.camera.far = 200;
+  light.shadow.camera.fov = light.angle / Math.PI * 180 * 2;
+
+   var light2 = new THREE.SpotLight(0xffffff, 0.5);
+  light2.position.set(0, 100, 0);
+  light2.angle = 0.9;
+  light2.penumbra = 0.9
+  scene.add(light2);
+
+ if(tankhead!=undefined)
+  light2.target=tankhead.children[0].children[0];
+
   window.addEventListener('resize', onWindowResize, false);
   readModel();
   readTpose();
   readbody();
+
+
+ light2.castShadow = true;
   //readTbody();
   let loader = new THREE.TextureLoader();
   loader.crossOrigin = '';
   var  texture = loader.load('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTagI5kKB9r6aCG6oBTgSUT_qe0f1dsbCYo-cyVLk9udcNdTTOS');
  // texture.repeat.set(2, 2);
-  var floor = new THREE.Mesh (new THREE.PlaneGeometry(200,200), new THREE.MeshLambertMaterial({side: THREE.DoubleSide,map:texture}));
+  var floor = new THREE.Mesh (new THREE.PlaneGeometry(200,200), new THREE.MeshPhongMaterial({side: THREE.DoubleSide,map:texture}));
   floor.rotation.x=-Math.PI/2;
   scene.add(floor);
-   floor.receiveShadow = true;
+ 
+  floor.receiveShadow = true;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
   gcontrol = new function() {
   this.tankx = 0;
   this.tankz = 0
@@ -456,15 +477,15 @@ function readTpose ( targetSize=10) {
   var onError = function(xhr) {};
 
   var mtlLoader = new THREE.MTLLoader();
-  mtlLoader.setPath('https://leooooii.github.io/CGhw/hw2/hero/');
-  mtlLoader.load('materials'+'.mtl', function(materials) {
+  mtlLoader.setPath('https://leooooii.github.io/CGhw/hw2/girl/');
+  mtlLoader.load('girl'+'.mtl', function(materials) {
 
     materials.preload();
 
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials(materials);
-    objLoader.setPath('https://leooooii.github.io/CGhw/hw2/hero/');
-    objLoader.load('model'+'.obj', function(object) {
+    objLoader.setPath('https://leooooii.github.io/CGhw/hw2/girl/');
+    objLoader.load('girl'+'.obj', function(object) {
 		
 		Thead =  unitize (object, targetSize);
 		//theObject.add ( new THREE.BoxHelper (theObject) )
@@ -473,8 +494,10 @@ function readTpose ( targetSize=10) {
 		 
 		//theObject.setRotationFromEuler (new THREE.Euler (3.1416/2, 0, -3.1416/2, 'ZYX'))
        // theObject.rotation.y=-Math.PI/2;
-        Thead.position.y=5;
+        Thead.position.y=4.7;
         Thead.position.z=40;
+         Thead.children[0].children[0].castShadow = true;
+          Thead.children[0].children[0].receiveShadow = true;
       //  var localPlane = new THREE.Plane( new THREE.Vector3( 0,  1, 0 ), 0 );
        // theObject.children[0].children[0].material[0].clippingPlanes = [localPlane];*/
 
@@ -568,7 +591,6 @@ function animate() {
    }
   // take previous one
    i = i-1;
-
 	// linearly interpolate between i & i+1
   
   var tt = (s - key[i].s) / (key[i + 1].s - key[i].s);
@@ -582,8 +604,8 @@ function animate() {
 	 var localPlane1 = new THREE.Plane( new THREE.Vector3( 0,  1, 0 ), -8.5 );
      var localPlane2 =new THREE.Plane( new THREE.Vector3( 0,  -1, 0 ), 8.5 );
      var localPlane3 =new THREE.Plane( new THREE.Vector3( 1,  0, 0 ), -5.5 );
-	  var localPlane4 = new THREE.Plane( new THREE.Vector3( 0,  1, 0 ),-7.6 );
-    var localPlane5 = new THREE.Plane( new THREE.Vector3( 1,  0, 0 ),-3);
+	  var localPlane4 = new THREE.Plane( new THREE.Vector3( 0,  1, 0 ),-2);
+    var localPlane5 = new THREE.Plane( new THREE.Vector3( 1,  0, 0 ),-5);
 	if(tankhead != undefined ) {
 		console.log(tankhead.children[0].children[0])
  		 for(let i=0;i<9;i++)
@@ -601,8 +623,8 @@ function animate() {
     }
     	if(Thead != undefined ) {
     	//console.log(Thead.children[0].children[0].material);
-    //  for(let i=0;i<4;i++)
-    //	Thead.children[0].children[0].material[i].clippingPlanes = [localPlane5];
+      for(let i=0;i<1;i++)
+    	Thead.children[0].children[0].material.clippingPlanes = [localPlane4];
     	Thead.rotation.y=-angel;
  		
     }
