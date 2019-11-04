@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+<style>
+	body {
+	  font-family: Monospace;
+	  background-color: #000;
+	  color: #fff;
+	  margin: 0px;
+	  overflow: hidden;
+	}
+
+	#info {
+	  color: #ffffff;
+	  position: absolute;
+	  top: 10px;
+	  width: 100%;
+	  text-align: center;
+	  z-index: 100;
+	  display: block;
+	}
+
+
+
+
+</style>
+</head>
+
+<body> 
+	<div id="info">hw3
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/107/three.min.js"></script>
+	<script src="https://threejs.org/build/three.min.js"></script>
+	<script src="https://threejs.org/examples/js/controls/OrbitControls.js">
+	</script>
+	<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js"></script>
+	<!--script src="https://rawgit.com/mrdoob/three.js/master/examples/js/loaders/DDSLoader.js"></script-->
+	<script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/loaders/MTLLoader.js"></script>
+	<script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/loaders/OBJLoader.js"></script>
+
+
+	
+<script>
+var camera, scene, renderer;
+var theObject;
+var mouseX = 0,
+  mouseY = 0;
+var intKey = [];
+var windowHalfX = window.innerWidth / 2;
+var windowHalfY = window.innerHeight / 2;
+
+var clock = new THREE.Clock();
+
+init();
+animate();
+
+
+function init() {
+
+  container = document.createElement('div');
+  document.body.appendChild(container);
+
+  renderer = new THREE.WebGLRenderer();
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  container.appendChild(renderer.domElement);
+  renderer.setClearColor (0x444444444);
+
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 2000);
+  camera.position.z = 100;
+  camera.position.y=100;
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+  // scene
+
+  scene = new THREE.Scene();
+
+	
+  gridxz = new THREE.GridHelper (200, 20,'red','black');
+  //scene.add (gridxz);
+
+  let axis = new THREE.AxisHelper (20);
+ // scene.add (axis);
+  	
+  var directionalLight = new THREE.DirectionalLight(0xffffff);
+  directionalLight.position.set(10, 5, 1).normalize();
+  scene.add(directionalLight);
+
+  var  light = new THREE.PointLight(0xffffff);
+  light.position.set(50,300, -50);
+    // shadow map settings
+  light.castShadow = true;
+  scene.add(light);
+  light.shadow.mapSize.width = 1024;
+  light.shadow.mapSize.height = 1024;
+  light.shadow.camera.near = 10;
+  light.shadow.camera.far = 200;
+  light.shadow.camera.fov = light.angle / Math.PI * 180 * 2;
+
+   var light2 = new THREE.SpotLight(0xffffff, 0.5);
+  light2.position.set(0, 100, 0);
+  light2.angle = 0.9;
+  light2.penumbra = 0.9
+  scene.add(light2);
+
+  window.addEventListener('resize', onWindowResize, false);
+  //readcar();
+
+
+ light2.castShadow = true;
+  //readTbody();
+  let loader = new THREE.TextureLoader();
+  loader.crossOrigin = '';
+  var  texture = loader.load('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTagI5kKB9r6aCG6oBTgSUT_qe0f1dsbCYo-cyVLk9udcNdTTOS');
+ // texture.repeat.set(2, 2);
+  var floor = new THREE.Mesh (new THREE.PlaneGeometry(200,200), new THREE.MeshPhongMaterial({side: THREE.DoubleSide,map:texture}));
+  floor.rotation.x=-Math.PI/2;
+  scene.add(floor);
+ 
+  floor.receiveShadow = true;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+
+  ///////////////////////////////////////////////////////////////////	
+	function onWindowResize() {
+
+	  windowHalfX = window.innerWidth / 2;
+	  windowHalfY = window.innerHeight / 2;
+
+	  camera.aspect = window.innerWidth / window.innerHeight;
+	  camera.updateProjectionMatrix();
+
+	  renderer.setSize(window.innerWidth, window.innerHeight);
+
+	}
+  
+}
+
+function readcar ( targetSize=10) {
+
+  var onProgress = function(xhr) {
+    if (xhr.lengthComputable) {
+      var percentComplete = xhr.loaded / xhr.total * 100;
+      console.log(Math.round(percentComplete, 2) + '% downloaded');
+    }
+  };
+
+  var onError = function(xhr) {};
+
+  var mtlLoader = new THREE.MTLLoader();
+  mtlLoader.setPath('https://leooooii.github.io/CGhw/hw3/car1/');
+  mtlLoader.load('materials'+'.mtl', function(materials) {
+
+    materials.preload();
+
+    var objLoader = new THREE.OBJLoader();
+    objLoader.setMaterials(materials);
+    objLoader.setPath('https://leooooii.github.io/CGhw/hw3/car1/');
+    objLoader.load('model'+'.obj', function(object) {
+    
+    theObject =  unitize (object, targetSize);
+    //theObject.add ( new THREE.BoxHelper (theObject) )
+    theObject.name = 'OBJ'
+    //scene.add (theObject);
+     
+    //theObject.setRotationFromEuler (new THREE.Euler (3.1416/2, 0, -3.1416/2, 'ZYX'))
+       // theObject.rotation.y=-Math.PI/2;
+      //  var localPlane = new THREE.Plane( new THREE.Vector3( 0,  1, 0 ), 0 );
+       // theObject.children[0].children[0].material[0].clippingPlanes = [localPlane];*/
+
+        scene.add(theObject);
+        
+    }, onProgress, onError);
+
+  });
+
+}
+////////////////////////////////////////
+// wrap an Object3D around the given object
+// so that it is centered at +Y axis
+// 
+function unitize (object, targetSize) {  
+	
+	// find bounding box of 'object'
+	var box3 = new THREE.Box3();
+	box3.setFromObject (object);
+	var size = new THREE.Vector3();
+	size.subVectors (box3.max, box3.min);
+	var center = new THREE.Vector3();
+	center.addVectors(box3.max, box3.min).multiplyScalar (0.5);
+	
+	//console.log ('center: ' + center.x + ', '+center.y + ', '+center.z );
+	//console.log ('size: ' + size.x + ', ' +  size.y + ', '+size.z );
+	
+	// uniform scaling according to objSize
+	var objSize = Math.max (size.x, size.y, size.z);
+	var scaleSet = targetSize/objSize;
+				
+	var theObject =  new THREE.Object3D();
+
+	theObject.add (object);
+	object.scale.set (scaleSet, scaleSet, scaleSet);
+	object.position.set (-center.x*scaleSet, -center.y*scaleSet, -center.z*scaleSet);
+    
+	return theObject;
+			
+}
+
+var angel=0;
+function animate() {
+
+
+	renderer.localClippingEnabled = true;
+  requestAnimationFrame(animate);
+  render();
+
+}
+
+function render() {
+		
+  renderer.render(scene, camera);
+
+}
+
+
+</script>
+</body>
+
+</html>
