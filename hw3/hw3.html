@@ -144,15 +144,15 @@ function readcar ( targetSize=10) {
   var onError = function(xhr) {};
 
   var mtlLoader = new THREE.MTLLoader();
-  mtlLoader.setPath('https://leooooii.github.io/CGhw/hw3/car4/');
-  mtlLoader.load('Convertible'+'.mtl', function(materials) {
+  mtlLoader.setPath('https://leooooii.github.io/CGhw/hw3/car1/');
+  mtlLoader.load('materials'+'.mtl', function(materials) {
 
     materials.preload();
 
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials(materials);
-    objLoader.setPath('https://leooooii.github.io/CGhw/hw3/car4/');
-    objLoader.load('Convertible'+'.obj', function(object) {
+    objLoader.setPath('https://leooooii.github.io/CGhw/hw3/car1/');
+    objLoader.load('model'+'.obj', function(object) {
     
     car =  unitize (object, targetSize);
     //theObject.add ( new THREE.BoxHelper (theObject) )
