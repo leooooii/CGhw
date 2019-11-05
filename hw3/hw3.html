@@ -40,45 +40,48 @@
 	<!--script src="https://rawgit.com/mrdoob/three.js/master/examples/js/loaders/DDSLoader.js"></script-->
 	<script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/loaders/MTLLoader.js"></script>
 	<script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/loaders/OBJLoader.js"></script>
-
-
+  <script src="https://jyunming-chen.github.io/tutsplus/js/KeyboardState.js"></script>
 	
 <script>
 var camera, scene, renderer;
-var theObject;
+var car;
 var mouseX = 0,
   mouseY = 0;
-var intKey = [];
-var windowHalfX = window.innerWidth / 2;
-var windowHalfY = window.innerHeight / 2;
-
+var orthoCam;
 var clock = new THREE.Clock();
+var pos = new THREE.Vector3();
+var vel = new THREE.Vector3();
+var keyboard = new KeyboardState();
+var force = new THREE.Vector3();
+var power, angle;
+
+
+(function() {
+  Math.clamp = function(val,min,max){
+    return Math.min(Math.max(val,min),max);
+    
+  }})();
 
 init();
 animate();
-
-
 function init() {
 
   container = document.createElement('div');
   document.body.appendChild(container);
 
   renderer = new THREE.WebGLRenderer();
-  renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
   container.appendChild(renderer.domElement);
   renderer.setClearColor (0x444444444);
 
   camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 2000);
-  camera.position.z = 100;
+  orthoCam= new THREE.OrthographicCamera(-15,15,15,-15,-35,35);
   camera.position.y=100;
   controls = new THREE.OrbitControls(camera, renderer.domElement);
 
   // scene
 
   scene = new THREE.Scene();
-
-	
   gridxz = new THREE.GridHelper (200, 20,'red','black');
   //scene.add (gridxz);
 
@@ -106,11 +109,11 @@ function init() {
   light2.penumbra = 0.9
   scene.add(light2);
 
-  window.addEventListener('resize', onWindowResize, false);
-  //readcar();
+  readcar();
+  power = 5.0;
+  angle = 0.0;
 
-
- light2.castShadow = true;
+  light2.castShadow = true;
   //readTbody();
   let loader = new THREE.TextureLoader();
   loader.crossOrigin = '';
@@ -123,20 +126,9 @@ function init() {
   floor.receiveShadow = true;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-
+ // renderer.autoClear = false;
   ///////////////////////////////////////////////////////////////////	
-	function onWindowResize() {
 
-	  windowHalfX = window.innerWidth / 2;
-	  windowHalfY = window.innerHeight / 2;
-
-	  camera.aspect = window.innerWidth / window.innerHeight;
-	  camera.updateProjectionMatrix();
-
-	  renderer.setSize(window.innerWidth, window.innerHeight);
-
-	}
   
 }
 
@@ -162,17 +154,10 @@ function readcar ( targetSize=10) {
     objLoader.setPath('https://leooooii.github.io/CGhw/hw3/car1/');
     objLoader.load('model'+'.obj', function(object) {
     
-    theObject =  unitize (object, targetSize);
+    car =  unitize (object, targetSize);
     //theObject.add ( new THREE.BoxHelper (theObject) )
-    theObject.name = 'OBJ'
-    //scene.add (theObject);
-     
-    //theObject.setRotationFromEuler (new THREE.Euler (3.1416/2, 0, -3.1416/2, 'ZYX'))
-       // theObject.rotation.y=-Math.PI/2;
-      //  var localPlane = new THREE.Plane( new THREE.Vector3( 0,  1, 0 ), 0 );
-       // theObject.children[0].children[0].material[0].clippingPlanes = [localPlane];*/
-
-        scene.add(theObject);
+    car.name = 'OBJ'
+    scene.add(car);
         
     }, onProgress, onError);
 
@@ -191,7 +176,7 @@ function unitize (object, targetSize) {
 	var size = new THREE.Vector3();
 	size.subVectors (box3.max, box3.min);
 	var center = new THREE.Vector3();
-	center.addVectors(box3.max, box3.min).multiplyScalar (0.5);
+	center.addVectors(box3.max, box3.min).multiplyScalar (1);
 	
 	//console.log ('center: ' + center.x + ', '+center.y + ', '+center.z );
 	//console.log ('size: ' + size.x + ', ' +  size.y + ', '+size.z );
@@ -204,16 +189,56 @@ function unitize (object, targetSize) {
 
 	theObject.add (object);
 	object.scale.set (scaleSet, scaleSet, scaleSet);
-	object.position.set (-center.x*scaleSet, -center.y*scaleSet, -center.z*scaleSet);
-    
+	//object.position.set (-center.x*scaleSet, -center.y*scaleSet, -center.z*scaleSet);
+  object.position.y=1.2;
 	return theObject;
 			
 }
+function update(dt) {
 
-var angel=0;
+  keyboard.update();
+  
+  if (vel.length() > 0) {
+    angle = Math.atan2(-vel.z, vel.x); // update orientation
+  }
+
+  if (keyboard.pressed("space"))  
+    power = 0.1;               
+  if (keyboard.pressed("up"))  
+    power *= 1.2;        
+  if (keyboard.pressed("down"))  
+    power /= 1.5;   
+  
+  power = Math.clamp (power, 0, 80.0); 
+  
+  
+  var angle_thrust = angle;
+  if (keyboard.pressed("left"))
+    angle_thrust += 0.4;
+  if (keyboard.pressed("right"))
+    angle_thrust -= 0.4;
+    
+  // compute force
+  var thrust = new THREE.Vector3(1,0,0).multiplyScalar(power).applyAxisAngle       (new THREE.Vector3(0,1,0), angle_thrust);
+  force.copy (thrust);
+  force.add(vel.clone().multiplyScalar(-2))
+
+  // eulers
+  vel.add(force.clone().multiplyScalar(dt));
+  pos.add(vel.clone().multiplyScalar(dt));
+}
+
 function animate() {
+  controls.update();
 
+  var dt = clock.getDelta();
+  update(dt);
 
+  // car update
+  if(car !=undefined){
+  car.position.copy(pos);
+  car.rotation.y = angle;
+  }
 	renderer.localClippingEnabled = true;
   requestAnimationFrame(animate);
   render();
@@ -221,7 +246,7 @@ function animate() {
 }
 
 function render() {
-		
+ // renderer.clear();
   renderer.render(scene, camera);
 
 }
