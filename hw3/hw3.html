@@ -54,16 +54,19 @@ var vel = new THREE.Vector3();
 var keyboard = new KeyboardState();
 var force = new THREE.Vector3();
 var power, angle;
-
+var obstacles = [];
 
 (function() {
   Math.clamp = function(val,min,max){
     return Math.min(Math.max(val,min),max);
     
   }})();
+ 
 
 init();
 animate();
+
+
 function init() {
 
   container = document.createElement('div');
@@ -129,7 +132,6 @@ function init() {
  // renderer.autoClear = false;
   ///////////////////////////////////////////////////////////////////	
 
-  
 }
 
 function readcar ( targetSize=10) {
@@ -238,7 +240,8 @@ function animate() {
   if(car !=undefined){
   car.position.copy(pos);
   car.rotation.y = angle;
-  }
+
+}
 	renderer.localClippingEnabled = true;
   requestAnimationFrame(animate);
   render();
