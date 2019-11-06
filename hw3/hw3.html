@@ -147,14 +147,14 @@ function readcar ( targetSize=10) {
 
   var mtlLoader = new THREE.MTLLoader();
   mtlLoader.setPath('https://leooooii.github.io/CGhw/hw3/car1/');
-  mtlLoader.load('materials'+'.mtl', function(materials) {
+  mtlLoader.load('Jeep'+'.mtl', function(materials) {
 
     materials.preload();
 
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials(materials);
     objLoader.setPath('https://leooooii.github.io/CGhw/hw3/car1/');
-    objLoader.load('model'+'.obj', function(object) {
+    objLoader.load('Jeep'+'.obj', function(object) {
     
     car =  unitize (object, targetSize);
     //theObject.add ( new THREE.BoxHelper (theObject) )
@@ -192,7 +192,8 @@ function unitize (object, targetSize) {
 	theObject.add (object);
 	object.scale.set (scaleSet, scaleSet, scaleSet);
 	//object.position.set (-center.x*scaleSet, -center.y*scaleSet, -center.z*scaleSet);
-  object.position.y=1.2;
+  object.position.y=0;
+  object.rotation.y=Math.PI/2;
 	return theObject;
 			
 }
@@ -240,9 +241,8 @@ function animate() {
   if(car !=undefined){
   car.position.copy(pos);
   car.rotation.y = angle;
-
+  console.log(car.children[0].children[0]);
 }
-	renderer.localClippingEnabled = true;
   requestAnimationFrame(animate);
   render();
 
