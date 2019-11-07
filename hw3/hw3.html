@@ -132,30 +132,86 @@ function init() {
   var texture2 = new THREE.TextureLoader().load("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQYL4AeoMTVSPuhN-uNaCrMWDi7vzfm3tsu2570j9Oz-eHcTWxH&s");
   var material = new THREE.MeshPhongMaterial({map:texture2, side:THREE.DoubleSide});
   var cylinderGeom = new THREE.CylinderGeometry( 40, 40, 1.9, 20, 1, false, 0, Math.PI/2);
-  var ringGeom = new THREE.RingBufferGeometry( 0.01, 30, 30, 1, 0, Math.PI);
-  var plane=new THREE.PlaneGeometry(50,30);
-  var uvs = ringGeom.attributes.uv.array;
-  var phiSegments = ringGeom.parameters.phiSegments;
-  var thetaSegments = ringGeom.parameters.thetaSegments;
-   for(let c=0, j=0;j<=phiSegments;j++){
-    for(let i=0;i<=thetaSegments;i++){
-      uvs[c++] = i / thetaSegments * 1;
-      uvs[c++] = j / phiSegments / 1;
+  var turn1 = new THREE.RingBufferGeometry( 0.01, 30, 30, 1, 0, Math.PI/2);
+  var turn2 = new THREE.RingBufferGeometry( 0.01, 30, 30, 1, 0, Math.PI);
+
+  var uvs1 = turn1.attributes.uv.array;
+  var phiSegments1 = turn1.parameters.phiSegments;
+  var thetaSegments1 = turn1.parameters.thetaSegments;
+   for(let c=0, j=0;j<=phiSegments1;j++){
+    for(let i=0;i<=thetaSegments1;i++){
+      uvs1[c++] = i / thetaSegments1 * 1;
+      uvs1[c++] = j / phiSegments1 / 1;
     }
   }
 
-  var road1 = new THREE.Mesh(ringGeom, material);
-  scene.add(road1);
+  var uvs2 = turn2.attributes.uv.array;
+  var phiSegments2 = turn2.parameters.phiSegments;
+  var thetaSegments2 = turn2.parameters.thetaSegments;
+   for(let c=0, j=0;j<=phiSegments2;j++){
+    for(let i=0;i<=thetaSegments2;i++){
+      uvs2[c++] = i / thetaSegments2 * 1;
+      uvs2[c++] = j / phiSegments2 / 1;
+    }
+  }
+
+  var road1 = new THREE.Mesh(turn1, material);
   road1.rotation.x=Math.PI/2;
-  road1.position.y=0.1;
-  var road2= new THREE.Mesh(plane,material);
-  scene.add(road2);
+  road1.rotation.z=Math.PI/2;
+  road1.position.set(-60,0.1,60);
+  var road2= new THREE.Mesh(new THREE.PlaneGeometry(120,30),material);
   road2.rotation.x=Math.PI/2;
-  road2.rotation.z=Math.PI/2;
-  road2.position.set(-15,0.1,-25);
+  road2.position.set(0,0.1,75);
+  var road3 =new THREE.Mesh(turn1,material);
+  road3.rotation.x=Math.PI/2;
+  road3.position.set(60,0.1,60);
+  var road4=new THREE.Mesh(new THREE.PlaneGeometry(120,30),material);
+  road4.rotation.x=Math.PI/2;
+  road4.rotation.z=Math.PI/2;
+  road4.position.set(75,0.1,0);
+  var road5=new THREE.Mesh(turn1,material);
+  road5.rotation.x=Math.PI/2;
+  road5.rotation.z=-Math.PI/2;
+  road5.position.set(60,0.1,-60);
+  var road6= new THREE.Mesh(new THREE.PlaneGeometry(10,30),material);
+  road6.rotation.x=Math.PI/2;
+  road6.position.set(55,0.1,-75);
+  var road7=new THREE.Mesh(turn1,material);
+  road7.rotation.x=Math.PI/2;
+  road7.rotation.z=Math.PI;
+  road7.position.set(50,0.1,-60);
+  var road8=new THREE.Mesh(new THREE.PlaneGeometry(90,30),material);
+  road8.rotation.x=Math.PI/2;
+  road8.rotation.z=Math.PI/2;
+  road8.position.set(35,0.1,-15);
+  var road9=new THREE.Mesh(turn1,material);
+  road9.rotation.x=Math.PI/2;
+  road9.position.set(20,0.1,30);
+  var road10= new THREE.Mesh(new THREE.PlaneGeometry(10,30),material);
+  road10.rotation.x=Math.PI/2;
+  road10.position.set(15,0.1,45);
+  var road11=new THREE.Mesh(turn1,material);
+  road11.rotation.x=Math.PI/2;
+  road11.rotation.z=Math.PI/2;
+  road11.position.set(10,0.1,30);
+  var road12=new THREE.Mesh(new THREE.PlaneGeometry(90,30),material);
+  road12.rotation.x=Math.PI/2;
+  road12.rotation.z=Math.PI/2;
+  road12.position.set(-5,0.1,-15);
+  var road13=new THREE.Mesh(turn1,material);
+  road13.rotation.x=Math.PI/2;
+  road13.rotation.z=-Math.PI/2;
+  road13.position.set(-20,0.1,-60);
+  var road14 = new THREE.Mesh(turn1, material);
+  road14.rotation.x=Math.PI/2;
+  road14.rotation.z=Math.PI;
+  road14.position.set(-60,0.1,-60);
+  var road15= new THREE.Mesh(new THREE.PlaneGeometry(40,30),material);
+  road15.rotation.x=Math.PI/2;
+  road15.position.set(-40,0.1,-75);
  // renderer.autoClear = false;
   ///////////////////////////////////////////////////////////////////	
-
+   scene.add(road1,road2,road3,road4,road5,road6,road7,road8,road9,road10,road11,road12,road13,road14,road15);
 }
 
 function readcar ( targetSize=10) {
