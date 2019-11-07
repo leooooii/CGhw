@@ -129,6 +129,30 @@ function init() {
   floor.receiveShadow = true;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  var texture2 = new THREE.TextureLoader().load("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQYL4AeoMTVSPuhN-uNaCrMWDi7vzfm3tsu2570j9Oz-eHcTWxH&s");
+  var material = new THREE.MeshPhongMaterial({map:texture2, side:THREE.DoubleSide});
+  var cylinderGeom = new THREE.CylinderGeometry( 40, 40, 1.9, 20, 1, false, 0, Math.PI/2);
+  var ringGeom = new THREE.RingBufferGeometry( 0.01, 30, 30, 1, 0, Math.PI);
+  var plane=new THREE.PlaneGeometry(50,30);
+  var uvs = ringGeom.attributes.uv.array;
+  var phiSegments = ringGeom.parameters.phiSegments;
+  var thetaSegments = ringGeom.parameters.thetaSegments;
+   for(let c=0, j=0;j<=phiSegments;j++){
+    for(let i=0;i<=thetaSegments;i++){
+      uvs[c++] = i / thetaSegments * 1;
+      uvs[c++] = j / phiSegments / 1;
+    }
+  }
+
+  var road1 = new THREE.Mesh(ringGeom, material);
+  scene.add(road1);
+  road1.rotation.x=Math.PI/2;
+  road1.position.y=0.1;
+  var road2= new THREE.Mesh(plane,material);
+  scene.add(road2);
+  road2.rotation.x=Math.PI/2;
+  road2.rotation.z=Math.PI/2;
+  road2.position.set(-15,0.1,-25);
  // renderer.autoClear = false;
   ///////////////////////////////////////////////////////////////////	
 
