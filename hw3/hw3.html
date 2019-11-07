@@ -92,7 +92,7 @@ function init() {
  // scene.add (axis);
   	
   var directionalLight = new THREE.DirectionalLight(0xffffff);
-  directionalLight.position.set(10, 5, 1).normalize();
+  directionalLight.position.set(-10, 5, 1).normalize();
   scene.add(directionalLight);
 
   var  light = new THREE.PointLight(0xffffff);
@@ -254,13 +254,14 @@ function readcar ( modelname,targetSize=10) {
     //theObject.add ( new THREE.BoxHelper (theObject) )
     car.name = 'OBJ'
     scene.add(car);
-        
+    car.children[0].children[0].castShadow = true;
+    car.children[0].children[0].receiveShadow = true;  
     }, onProgress, onError);
 
   });
 
 }
-function readstation ( modelname,targetSize=10) {
+function readstation ( modelname,targetSize=40) {
 
   var onProgress = function(xhr) {
     if (xhr.lengthComputable) {
@@ -286,6 +287,8 @@ function readstation ( modelname,targetSize=10) {
     //theObject.add ( new THREE.BoxHelper (theObject) )
     gas.name = 'station'
     scene.add(gas);
+    gas.children[0].children[0].castShadow = true;
+    gas.children[0].children[0].receiveShadow = true;
     }, onProgress, onError);
 
   });
@@ -313,8 +316,8 @@ function unitize2 (object, targetSize) {
   theObject.add (object);
   object.scale.set (scaleSet, scaleSet, scaleSet);
   //object.position.set (-center.x*scaleSet, -center.y*scaleSet, -center.z*scaleSet);
-  object.rotation.y=Math.PI/2;
-  object.position.set(0,0,67.5)
+  object.rotation.y=Math.PI;
+  object.position.set(-50,3,-10)
   return theObject;
       
 }
@@ -344,7 +347,8 @@ function readtraffic ( modelname,targetSize=10) {
     //theObject.add ( new THREE.BoxHelper (theObject) )
     traffic.name = 'light'
     scene.add(traffic);
-        
+      traffic.children[0].children[0].castShadow = true;
+    traffic.children[0].children[0].receiveShadow = true; 
     }, onProgress, onError);
 
   });
