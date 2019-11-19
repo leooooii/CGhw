@@ -28,11 +28,13 @@ body {
 <script src="https://threejs.org/build/three.min.js"></script>
 <script src="https://threejs.org/examples/js/controls/OrbitControls.js">
 </script>
-
+  <script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/loaders/MTLLoader.js"></script>
+  <script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/loaders/OBJLoader.js"></script>
 	<script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/misc/Gyroscope.js"></script>
 
 <script>
 var camera, scene, renderer;
+var lamp,chair;
 
 init();
 animate();
@@ -54,13 +56,132 @@ function init() {
   var gridXZ = new THREE.GridHelper(200, 20, 'red', 'white');
   scene.add(gridXZ);
 
-var light = new THREE.PointLight( 0xffffff, 1);
-light.position.set( 50, 50, 50 );
-scene.add( light );
-
+  var light = new THREE.PointLight( 0xffffff, 1);
+  light.position.set( 50, 50, 50 );
+  scene.add( light );
+  //readlamp();
+   readchair();
   scene.add (buildtea());
 }
 
+function readlamp(targetSize=20) {
+
+  var onProgress = function(xhr) {
+    if (xhr.lengthComputable) {
+      var percentComplete = xhr.loaded / xhr.total * 100;
+      console.log(Math.round(percentComplete, 2) + '% downloaded');
+    }
+  };
+
+  var onError = function(xhr) {};
+
+  var mtlLoader = new THREE.MTLLoader();
+  mtlLoader.setPath('https://leooooii.github.io/CGhw/hw4/lamp/');
+  mtlLoader.load('materials'+'.mtl', function(materials) {
+
+    materials.preload();
+
+    var objLoader = new THREE.OBJLoader();
+    objLoader.setMaterials(materials);
+    objLoader.setPath('https://leooooii.github.io/CGhw/hw4/lamp/');
+    objLoader.load('model'+'.obj', function(object) {
+    
+    lamp =  unitize1 (object, targetSize);
+    //theObject.add ( new THREE.BoxHelper (theObject) )
+    lamp.name = 'light'
+    scene.add(lamp);
+    lamp.children[0].children[0].castShadow = true;
+    lamp.children[0].children[0].receiveShadow = true; 
+    }, onProgress, onError);
+
+  });
+
+}
+function unitize1 (object, targetSize) {  
+  
+  // find bounding box of 'object'
+  var box3 = new THREE.Box3();
+  box3.setFromObject (object);
+  var size = new THREE.Vector3();
+  size.subVectors (box3.max, box3.min);
+  var center = new THREE.Vector3();
+  center.addVectors(box3.max, box3.min).multiplyScalar (1);
+  
+  //console.log ('center: ' + center.x + ', '+center.y + ', '+center.z );
+  //console.log ('size: ' + size.x + ', ' +  size.y + ', '+size.z );
+  
+  // uniform scaling according to objSize
+  var objSize = Math.max (size.x, size.y, size.z);
+  var scaleSet = targetSize/objSize;
+        
+  var theObject =  new THREE.Object3D();
+
+  theObject.add (object);
+  object.scale.set (scaleSet, scaleSet, scaleSet);
+  object.position.set(50,50,50);
+  //object.position.set (-center.x*scaleSet, -center.y*scaleSet, -center.z*scaleSet);
+  return theObject;
+
+}
+function readchair(targetSize=20) {
+
+  var onProgress = function(xhr) {
+    if (xhr.lengthComputable) {
+      var percentComplete = xhr.loaded / xhr.total * 100;
+      console.log(Math.round(percentComplete, 2) + '% downloaded');
+    }
+  };
+
+  var onError = function(xhr) {};
+
+  var mtlLoader = new THREE.MTLLoader();
+  mtlLoader.setPath('https://leooooii.github.io/CGhw/hw4/lamp/');
+  mtlLoader.load('WoodChair_01'+'.mtl', function(materials) {
+
+    materials.preload();
+
+    var objLoader = new THREE.OBJLoader();
+    objLoader.setMaterials(materials);
+    objLoader.setPath('https://leooooii.github.io/CGhw/hw4/lamp/');
+    objLoader.load('WoodChair_01(1)'+'.obj', function(object) {
+    
+    chair =  unitize2 (object, targetSize);
+    //theObject.add ( new THREE.BoxHelper (theObject) )
+    chair.name = 'light'
+    scene.add(chair);
+    chair.children[0].children[0].castShadow = true;
+    chair.children[0].children[0].receiveShadow = true; 
+    }, onProgress, onError);
+
+  });
+
+}
+function unitize2 (object, targetSize) {  
+  
+  // find bounding box of 'object'
+  var box3 = new THREE.Box3();
+  box3.setFromObject (object);
+  var size = new THREE.Vector3();
+  size.subVectors (box3.max, box3.min);
+  var center = new THREE.Vector3();
+  center.addVectors(box3.max, box3.min).multiplyScalar (1);
+  
+  //console.log ('center: ' + center.x + ', '+center.y + ', '+center.z );
+  //console.log ('size: ' + size.x + ', ' +  size.y + ', '+size.z );
+  
+  // uniform scaling according to objSize
+  var objSize = Math.max (size.x, size.y, size.z);
+  var scaleSet = targetSize/objSize;
+        
+  var theObject =  new THREE.Object3D();
+
+  theObject.add (object);
+  object.scale.set (scaleSet, scaleSet, scaleSet);
+  object.position.set(50,50,50);
+  //object.position.set (-center.x*scaleSet, -center.y*scaleSet, -center.z*scaleSet);
+  return theObject;
+
+}
 function buildtea() {
   let geometry = new THREE.Geometry();
   let sq11 = Math.sqrt(11);
