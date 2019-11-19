@@ -24,17 +24,37 @@ body {
 </head>
 
 <body> 
-<div id="info">hw4
+<div id="info">hw4<br>
+  KP<input type=range min=50 max=300 id='kp'> 
+<br>
+KD<input type=range min=0 max=50 id='kd'> <br>
 <script src="https://threejs.org/build/three.min.js"></script>
 <script src="https://threejs.org/examples/js/controls/OrbitControls.js">
 </script>
   <script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/loaders/MTLLoader.js"></script>
   <script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/loaders/OBJLoader.js"></script>
 	<script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/misc/Gyroscope.js"></script>
-
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
 <script>
-var camera, scene, renderer;
-var lamp,chair;
+var camera, scene, renderer,light,light2;
+var lamp,chair,desk;
+var pickables = [];
+var raycaster = new THREE.Raycaster();
+var mouse = new THREE.Vector2();
+var tea;
+var lit = false,spot=false;
+var KP = 150;
+var KD = 20;
+var y1, v1,y2,v2;
+var light1ref = 1,light2ref=0;
+
+
+$('#kp').change( function() {
+  KP = $(this).val();
+});
+$('#kd').change( function() {
+  KD = $(this).val();
+});
 
 init();
 animate();
@@ -49,19 +69,92 @@ function init() {
   document.body.appendChild(renderer.domElement);
 
   camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 1000);
-  camera.position.z = 500;
+  camera.position.z = 400;
+  camera.position.y=200;
   let controls = new THREE.OrbitControls(camera, renderer.domElement);
 
   ////////////////////////////////////////////////////////////////
   var gridXZ = new THREE.GridHelper(200, 20, 'red', 'white');
-  scene.add(gridXZ);
+  //scene.add(gridXZ);
 
-  var light = new THREE.PointLight( 0xffffff, 1);
-  light.position.set( 50, 50, 50 );
+  light = new THREE.PointLight( 0xffffff, 1);
+  light.position.set( 0, 200, 100 );
   scene.add( light );
+
+  light2 = new THREE.SpotLight(0xffffff, 0.5);
+  light2.position.set(0, 200, 0);
+  light2.angle = Math.PI/9;
+  light2.penumbra = 0.1
+  scene.add(light2);
+  light2.castShadow = true;
+  light2.shadow.mapSize.width = 1024;
+  light2.shadow.mapSize.height = 1024;
+  light2.shadow.camera.near = 10;
+  light2.shadow.camera.far = 200;
+  light2.shadow.camera.fov = light.angle / Math.PI * 180 * 2;
+  
+  slhelper = new THREE.SpotLightHelper (light2);
+  lschelper = new THREE.CameraHelper(light2.shadow.camera)  
+  scene.add (slhelper)
+  scene.add(lschelper);
   //readlamp();
-   readchair();
-  scene.add (buildtea());
+   //readchair();
+  let loader = new THREE.TextureLoader();
+  loader.crossOrigin = '';
+  let texture = loader.load ('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS3weWUGfzDvn1DInfcssT5xLTsWif7AIU1vvBnFm1LhFTfG8vc7A&s');
+  texture.repeat.set(6, 6);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  var floor = new THREE.Mesh(new THREE.PlaneGeometry(500,500), new THREE.MeshPhongMaterial({map:texture,side:THREE.DoubleSide}));
+  floor.receiveShadow=true;
+  floor.rotation.x=-Math.PI/2;
+  tea=buildtea();
+  desk=builddesk();
+  scene.add (tea,floor,desk);
+  //tea.position.set(0,100,0)
+  ///////////////////
+   myswitch = new THREE.Group();
+  casing = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 10, 20), new THREE.MeshPhongMaterial())
+  core = new THREE.Mesh(new THREE.CylinderGeometry(10, 10, 12, 20), new THREE.MeshPhongMaterial({
+    //color: 'red'
+  }))
+  myswitch.add(casing, core);
+  scene.add(myswitch);
+  myswitch.position.set(50,0,0)
+  casing.position.y = 5;
+  core.position.y = 6;
+  core.name = 'light'
+  /////////////////
+  myswitch2 = new THREE.Group();
+  casing2 = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 10, 20), new THREE.MeshPhongMaterial())
+  core2 = new THREE.Mesh(new THREE.CylinderGeometry(10, 10, 12, 20), new THREE.MeshPhongMaterial({
+    //color: 'red'
+  }))
+  myswitch2.add(casing2, core2);
+  scene.add(myswitch2);
+  myswitch2.position.set(-50,0,0)
+  casing2.position.y = 5;
+  core2.position.y = 6;
+  core2.name = 'spotlight'
+  /////////////////
+  pickables = [core,core2]
+  light2.target = myswitch;
+  document.addEventListener('mousedown', onDocumentMouseDown, false)
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
+  ////////////////////
+
+  y1 =y2=0;
+  v1 =v2=0;
+}
+
+function controllight1 () {
+  let u = KP*(light1ref - y1) - KD*v1;
+  return u;
+}
+function controllight2 () {
+  let u = KP*(light2ref - y2) - KD*v2;
+  return u;
 }
 
 function readlamp(targetSize=20) {
@@ -135,15 +228,15 @@ function readchair(targetSize=20) {
   var onError = function(xhr) {};
 
   var mtlLoader = new THREE.MTLLoader();
-  mtlLoader.setPath('https://leooooii.github.io/CGhw/hw4/lamp/');
-  mtlLoader.load('WoodChair_01'+'.mtl', function(materials) {
+  mtlLoader.setPath('https://leooooii.github.io/CGhw/hw4/officechair/');
+  mtlLoader.load('materials'+'.mtl', function(materials) {
 
     materials.preload();
 
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials(materials);
-    objLoader.setPath('https://leooooii.github.io/CGhw/hw4/lamp/');
-    objLoader.load('WoodChair_01(1)'+'.obj', function(object) {
+    objLoader.setPath('https://leooooii.github.io/CGhw/hw4/officechair/');
+    objLoader.load('model'+'.obj', function(object) {
     
     chair =  unitize2 (object, targetSize);
     //theObject.add ( new THREE.BoxHelper (theObject) )
@@ -182,6 +275,16 @@ function unitize2 (object, targetSize) {
   return theObject;
 
 }
+function builddesk(){
+ var obeject1 = new THREE.Object3D();
+  var desktop = new THREE.Mesh(new THREE.BoxGeometry(200,5,70,4), new THREE.MeshPhongMaterial({color:0xf5a945}));
+  obeject1.add(desktop);
+  return obeject1;
+
+
+
+
+}
 function buildtea() {
   let geometry = new THREE.Geometry();
   let sq11 = Math.sqrt(11);
@@ -196,8 +299,9 @@ function buildtea() {
   geometry.vertices.push ( new THREE.Vector3(0, 12+sq11, 0) );//8
   geometry.vertices.push ( new THREE.Vector3( 5,12, -5) );//9
   geometry.vertices.push ( new THREE.Vector3(5, 0, -5) );//10
-  
 
+  geometry.vertices.push ( new THREE.Vector3(-5, 12+sq11+1.5, 0) );//11
+  geometry.vertices.push ( new THREE.Vector3(5, 12+sq11+1.5, 0) );//12
 
   let face;
   face = new THREE.Face3 ( 0, 1, 2 ); face.materialIndex = 0;////frontdown
@@ -215,7 +319,7 @@ function buildtea() {
   face = new THREE.Face3 ( 0, 5, 7 ); face.materialIndex = 2;
   geometry.faces.push (face);
 
-  face = new THREE.Face3 ( 8, 7, 5 ); face.materialIndex = 3;//////leftup
+  face = new THREE.Face3 ( 8, 7, 5 ); face.materialIndex = 6;//////leftup
   geometry.faces.push (face);
 
   face = new THREE.Face3 ( 6, 7, 10 ); face.materialIndex = 0;///backdown
@@ -233,7 +337,7 @@ function buildtea() {
   face = new THREE.Face3 ( 10, 9, 2 ); face.materialIndex = 5;
   geometry.faces.push (face);
 
- face = new THREE.Face3 ( 9, 8, 2 ); face.materialIndex = 6;///rightup
+ face = new THREE.Face3 ( 9, 8, 2 ); face.materialIndex = 3;///rightup
  geometry.faces.push (face);
 
   face = new THREE.Face3 ( 6, 1, 0 ); face.materialIndex = 7;/////bottom
@@ -241,6 +345,15 @@ function buildtea() {
   face = new THREE.Face3 ( 10, 1, 6 ); face.materialIndex = 7;
   geometry.faces.push (face);
 
+   face = new THREE.Face3 ( 11, 12, 4 ); face.materialIndex = 8;/////backupup
+  geometry.faces.push (face);
+  face = new THREE.Face3 ( 12, 3, 4 ); face.materialIndex = 8;
+  geometry.faces.push (face);
+   
+   face = new THREE.Face3 ( 4, 12,11 ); face.materialIndex = 9;/////backupup
+  geometry.faces.push (face);
+  face = new THREE.Face3 ( 4, 3, 12 ); face.materialIndex = 9;
+  geometry.faces.push (face);
 
 
   geometry.faceVertexUvs[0].push ([new THREE.Vector2(0,0), new THREE.Vector2(1,0), new THREE.Vector2(1,1) ]);
@@ -268,20 +381,30 @@ function buildtea() {
    geometry.faceVertexUvs[0].push ([new THREE.Vector2(0,1), new THREE.Vector2(1,0), new THREE.Vector2(0,0) ]);
    geometry.faceVertexUvs[0].push ([new THREE.Vector2(1,1), new THREE.Vector2(1,0), new THREE.Vector2(0,1) ]);
 
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(1,1), new THREE.Vector2(0,1), new THREE.Vector2(1,0) ]);
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(0,1), new THREE.Vector2(0,0), new THREE.Vector2(1,0) ]);
+
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(0,0), new THREE.Vector2(1,1), new THREE.Vector2(0,1) ]);
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(0,0), new THREE.Vector2(1,0), new THREE.Vector2(1,1) ]);
+
+ // geometry.computeBoundingSphere();
   geometry.computeFaceNormals();
-  geometry.computeVertexNormals();
+ // geometry.computeVertexNormals();
   
   let loader = new THREE.TextureLoader();
   loader.crossOrigin = '';
   let texture1 = loader.load ('https://i.imgur.com/rMsMrad.jpg');
-  let texture2 = loader.load ('https://i.imgur.com/N9viLqe.jpg');
+  let texture2 = loader.load ('https://i.imgur.com/Ot2N6b8.jpg');
   let texture3 = loader.load ('https://i.imgur.com/FA3AV2k.jpg');
   let texture4 = loader.load ('https://i.imgur.com/mWvAoa6.jpg');
 
-  let texture5 = loader.load ('https://i.imgur.com/1i36CsG.jpg');
+  let texture5 = loader.load ('https://i.imgur.com/sydUrcV.jpg');
   let texture6 = loader.load ('https://i.imgur.com/MAIQSqz.jpg');
   let texture7 = loader.load ('https://i.imgur.com/hwUyqdb.jpg');
   let texture8 = loader.load ('https://i.imgur.com/ubuxR5I.jpg');
+  
+  let texture9 = loader.load ('https://i.imgur.com/cYfbGAh.jpg');
+  let texture10 = loader.load ('https://i.imgur.com/SoFKKwx.jpg');
   
   materialArray = [];
   materialArray.push (new THREE.MeshPhongMaterial ({map: texture1}), 
@@ -291,13 +414,60 @@ function buildtea() {
   new THREE.MeshPhongMaterial({map: texture2,side: THREE.DoubleSide}),
   new THREE.MeshPhongMaterial ({map: texture6}),
     new THREE.MeshPhongMaterial ({map: texture7}),
- new THREE.MeshPhongMaterial ({map: texture8})
+ new THREE.MeshPhongMaterial ({map: texture8}),
+ new THREE.MeshPhongMaterial ({map: texture9}),
+ new THREE.MeshPhongMaterial ({map: texture10})
 
   );
   return new THREE.Mesh (geometry, materialArray);  
 }
 
+function onDocumentMouseDown(event) {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  // find intersections
+  raycaster.setFromCamera(mouse, camera);
+  var intersects = raycaster.intersectObjects(pickables, false);
+  if(intersects.length>0){
+  if (intersects[0].object.name =='light') {
+    lit = !lit; // toggle;
+    if (lit) {
+      core.material.emissive = new THREE.Color(0x030303);
+       core2.material.emissive = new THREE.Color(0x030303);
+       light1ref=1;
+    } else {
+      core.material.emissive = new THREE.Color(0xd5d47d);
+      core2.material.emissive = new THREE.Color(0xd5d47d);
+      light1ref=0;
+    }
+  } 
+   else  if (intersects[0].object.name =='spotlight') {
+    spot = !spot; // toggle;
+    if (spot) {
+       core2.material.emissive = new THREE.Color(0x030303);
+       core2.material.emissive = new THREE.Color(0x030303);
+       light2ref=1;
+    } else {
+      core2.material.emissive = new THREE.Color(0xd5d47d);
+      core.material.emissive = new THREE.Color(0xd5d47d);
+      light2ref=0;
+    }
+  } 
+}
+}
 function animate() {
+  var f1 = controllight1();  
+  let dt = 0.01;
+  v1 += f1*dt;
+  y1 += v1*dt
+  light.intensity = y1;
+///////////////////////////////
+  var f2 = controllight2();  
+  v2 += f2*dt;
+  y2 += v2*dt
+  light2.intensity = y2;
+
   requestAnimationFrame(animate);
   render();
 
