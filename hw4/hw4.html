@@ -36,8 +36,8 @@ KD<input type=range min=0 max=50 id='kd'> <br>
 	<script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/misc/Gyroscope.js"></script>
 <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
 <script>
-var camera, scene, renderer,light,light2;
-var lamp,chair,desk;
+var camera, scene, renderer,light,light2,light3;
+var lamp,chair,desk,pencilbox,book;
 var pickables = [];
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
@@ -76,29 +76,41 @@ function init() {
   ////////////////////////////////////////////////////////////////
   var gridXZ = new THREE.GridHelper(200, 20, 'red', 'white');
   //scene.add(gridXZ);
+  light = new THREE.SpotLight(0xffffff, 0.5);
+  light.position.set(-100, 300, -200);
+  light.angle = 0.9;
+  light.penumbra = 1;
+  scene.add(light);
+  light.castShadow = true;
 
-  light = new THREE.PointLight( 0xffffff, 1);
-  light.position.set( 0, 200, 100 );
-  scene.add( light );
+  directionalLight = new THREE.DirectionalLight(0xffffff);
+  directionalLight.position.set(10, 5, 1).normalize();
+  scene.add(directionalLight);
 
   light2 = new THREE.SpotLight(0xffffff, 0.5);
-  light2.position.set(0, 200, 0);
-  light2.angle = Math.PI/9;
-  light2.penumbra = 0.1
+  light2.position.set(-150, 120, -10);
+  light2.angle = Math.PI/12;
+  light2.penumbra = 1
   scene.add(light2);
   light2.castShadow = true;
   light2.shadow.mapSize.width = 1024;
   light2.shadow.mapSize.height = 1024;
   light2.shadow.camera.near = 10;
   light2.shadow.camera.far = 200;
-  light2.shadow.camera.fov = light.angle / Math.PI * 180 * 2;
-  
+  light2.shadow.camera.fov = light2.angle / Math.PI * 180 * 2;
+
+  light3 = new THREE.SpotLight(0xffffff, 0.5);
+  light3.position.set(-50, 120, -10);
+  light3.angle = Math.PI/12;
+  light3.penumbra = 1
+  scene.add(light2,light3);
   slhelper = new THREE.SpotLightHelper (light2);
   lschelper = new THREE.CameraHelper(light2.shadow.camera)  
-  scene.add (slhelper)
-  scene.add(lschelper);
-  //readlamp();
-   //readchair();
+  //scene.add (slhelper)
+  //scene.add(lschelper);
+
+  readlamp();
+  readchair();
   let loader = new THREE.TextureLoader();
   loader.crossOrigin = '';
   let texture = loader.load ('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS3weWUGfzDvn1DInfcssT5xLTsWif7AIU1vvBnFm1LhFTfG8vc7A&s');
@@ -106,11 +118,20 @@ function init() {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   var floor = new THREE.Mesh(new THREE.PlaneGeometry(500,500), new THREE.MeshPhongMaterial({map:texture,side:THREE.DoubleSide}));
-  floor.receiveShadow=true;
+  floor.receiveShadow = true;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
+
   floor.rotation.x=-Math.PI/2;
   tea=buildtea();
   desk=builddesk();
-  scene.add (tea,floor,desk);
+  book=buildbook();
+  pencilbox=buildpencil();
+  tea.scale.set(0.5,0.5,.5);
+  tea.position.set(20,72,0);
+  tea.rotation.y=-Math.PI/5;
+  light3.target=book;
+  scene.add (tea,book,floor,desk,pencilbox);
   //tea.position.set(0,100,0)
   ///////////////////
    myswitch = new THREE.Group();
@@ -120,7 +141,6 @@ function init() {
   }))
   myswitch.add(casing, core);
   scene.add(myswitch);
-  myswitch.position.set(50,0,0)
   casing.position.y = 5;
   core.position.y = 6;
   core.name = 'light'
@@ -130,18 +150,27 @@ function init() {
   core2 = new THREE.Mesh(new THREE.CylinderGeometry(10, 10, 12, 20), new THREE.MeshPhongMaterial({
     //color: 'red'
   }))
+myswitch.castShadow = true;
+myswitch.receiveShadow = true; 
+myswitch2.castShadow = true;
+myswitch2.receiveShadow = true; 
+
   myswitch2.add(casing2, core2);
   scene.add(myswitch2);
-  myswitch2.position.set(-50,0,0)
+  light2.target=myswitch2;
   casing2.position.y = 5;
   core2.position.y = 6;
   core2.name = 'spotlight'
   /////////////////
+  myswitch.position.set(0,72,0);
+  myswitch2.position.set(-10,72,0);
+  myswitch.scale.set(.2,.2,.2);
+  myswitch2.scale.set(.2,.2,.2);
   pickables = [core,core2]
   light2.target = myswitch;
   document.addEventListener('mousedown', onDocumentMouseDown, false)
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFShadowMap;
+
+
   ////////////////////
 
   y1 =y2=0;
@@ -157,7 +186,7 @@ function controllight2 () {
   return u;
 }
 
-function readlamp(targetSize=20) {
+function readlamp(targetSize=40) {
 
   var onProgress = function(xhr) {
     if (xhr.lengthComputable) {
@@ -211,12 +240,13 @@ function unitize1 (object, targetSize) {
 
   theObject.add (object);
   object.scale.set (scaleSet, scaleSet, scaleSet);
-  object.position.set(50,50,50);
+  object.position.set(-50,93.5,-10);
+  object.rotation.y=Math.PI/4;
   //object.position.set (-center.x*scaleSet, -center.y*scaleSet, -center.z*scaleSet);
   return theObject;
 
 }
-function readchair(targetSize=20) {
+function readchair(targetSize=80) {
 
   var onProgress = function(xhr) {
     if (xhr.lengthComputable) {
@@ -228,15 +258,15 @@ function readchair(targetSize=20) {
   var onError = function(xhr) {};
 
   var mtlLoader = new THREE.MTLLoader();
-  mtlLoader.setPath('https://leooooii.github.io/CGhw/hw4/officechair/');
-  mtlLoader.load('materials'+'.mtl', function(materials) {
+  mtlLoader.setPath('https://leooooii.github.io/CGhw/hw4/chair/');
+  mtlLoader.load('WoodChair_01'+'.mtl', function(materials) {
 
     materials.preload();
 
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials(materials);
-    objLoader.setPath('https://leooooii.github.io/CGhw/hw4/officechair/');
-    objLoader.load('model'+'.obj', function(object) {
+    objLoader.setPath('https://leooooii.github.io/CGhw/hw4/chair/');
+    objLoader.load('WoodChair_01(1)'+'.obj', function(object) {
     
     chair =  unitize2 (object, targetSize);
     //theObject.add ( new THREE.BoxHelper (theObject) )
@@ -270,18 +300,182 @@ function unitize2 (object, targetSize) {
 
   theObject.add (object);
   object.scale.set (scaleSet, scaleSet, scaleSet);
-  object.position.set(50,50,50);
-  //object.position.set (-center.x*scaleSet, -center.y*scaleSet, -center.z*scaleSet);
+  object.position.set(0,0,70);
+  object.rotation.x=-Math.PI/2;
+  object.rotation.z=-Math.PI/2;
+    //object.position.set (-center.x*scaleSet, -center.y*scaleSet, -center.z*scaleSet);
   return theObject;
+
+}
+function buildpencil(){
+ var object = new THREE.Object3D();
+   let loader = new THREE.TextureLoader();
+  loader.crossOrigin = '';
+  let matArray = [];
+  matArray.push(new THREE.MeshPhongMaterial({
+  map: loader.load('https://i.imgur.com/gMPRWuf.png'),
+    alphaTest: 0.5,
+    side: THREE.DoubleSide,
+    color:0xf96266
+  }));
+  matArray.push(new THREE.MeshPhongMaterial( { 
+  map: loader.load('https://i.imgur.com/gMPRWuf.png'),
+    alphaTest: 0.5,
+    side: THREE.DoubleSide,
+        color:0xf96266
+  }));
+  matArray.push(new THREE.MeshPhongMaterial({
+    visible:false
+  }));
+  matArray.push(new THREE.MeshPhongMaterial({
+    map: loader.load('https://i.imgur.com/gMPRWuf.png'),
+    alphaTest: 0.5,
+    side: THREE.DoubleSide,
+        color:0xf96266
+  }));
+  matArray.push(new THREE.MeshPhongMaterial({
+    map: loader.load('https://i.imgur.com/gMPRWuf.png'),
+    alphaTest: 0.5,
+    side: THREE.DoubleSide,
+        color:0xf96266
+  }));
+  matArray.push(new THREE.MeshPhongMaterial({
+    map: loader.load('https://i.imgur.com/gMPRWuf.png'),
+    alphaTest: 0.5,
+    side: THREE.DoubleSide,
+        color:0xf96266
+  }));
+  var box = new THREE.Mesh(new THREE.BoxGeometry(6, 10, 6), matArray);
+  box.castShadow = true;
+  box.receiveShadow = true; 
+  var pencil1=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,12,70), new THREE.MeshPhongMaterial({color:0xf16266}));
+  var head1=new THREE.Mesh(new THREE.CylinderGeometry(.1,.3,1,70), new THREE.MeshPhongMaterial({color:0x9a6600}));
+  var color1=new THREE.Mesh(new THREE.CylinderGeometry(.01,.1,.3,70), new THREE.MeshPhongMaterial({color:0xf16266}));
+  box.add(pencil1);
+  pencil1.add(head1);
+  head1.add(color1);
+  color1.position.set(0,0.65,0);
+  head1.position.set(0,6.5,0);
+  pencil1.position.set(-1,2,0);
+  pencil1.rotation.x=Math.PI/6;
+  ///////////////////
+   var pencil2=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,12,70), new THREE.MeshPhongMaterial({color:0xc4e9c5}));
+  var head2=new THREE.Mesh(new THREE.CylinderGeometry(.1,.3,1,70), new THREE.MeshPhongMaterial({color:0x9a6600}));
+  var color2=new THREE.Mesh(new THREE.CylinderGeometry(.01,.1,.3,70), new THREE.MeshPhongMaterial({color:0xc4e9c5}));
+  box.add(pencil2);
+  pencil2.add(head2);
+  head2.add(color2);
+  color1.position.set(0,0.65,0);
+  head2.position.set(0,6.5,0);
+  pencil2.position.set(1,2,0);
+  pencil2.rotation.x=-Math.PI/6;
+
+  object.add(box)
+  object.position.set(30, 78, -10)
+  object.rotation.y = Math.PI / 3;
+  return object;
+
+}
+function buildbook(){
+ var object = new THREE.Object3D();
+   let loader = new THREE.TextureLoader();
+  loader.crossOrigin = '';
+  let matArray = [];
+  matArray.push(new THREE.MeshPhongMaterial({
+  map: loader.load('https://i.imgur.com/2p8XxDv.jpg'),/////right
+    side: THREE.DoubleSide,
+  }));
+  matArray.push(new THREE.MeshPhongMaterial( { 
+  map: loader.load('https://i.imgur.com/2p8XxDv.jpg'),
+    side: THREE.DoubleSide,
+  }));
+  matArray.push(new THREE.MeshPhongMaterial({
+    map: loader.load('https://i.imgur.com/1vp7OEL.jpg'),//cover
+    side: THREE.DoubleSide,
+  }));
+  matArray.push(new THREE.MeshPhongMaterial({
+    map: loader.load('https://i.imgur.com/2p8XxDv.jpg'),
+    side: THREE.DoubleSide,
+  }));
+  matArray.push(new THREE.MeshPhongMaterial({
+    map: loader.load('https://i.imgur.com/nzj5zSA.jpg'),//down
+    side: THREE.DoubleSide,
+  }));
+  matArray.push(new THREE.MeshPhongMaterial({
+    map: loader.load('https://i.imgur.com/nzj5zSA.jpg'),//left
+    side: THREE.DoubleSide,
+  }));
+  var box = new THREE.Mesh(new THREE.BoxGeometry(12, 2, 16), matArray);
+  box.castShadow = true;
+  box.receiveShadow = true; 
+
+  object.add(box)
+  object.position.set(-30, 73, 10)
+  return object;
 
 }
 function builddesk(){
  var obeject1 = new THREE.Object3D();
-  var desktop = new THREE.Mesh(new THREE.BoxGeometry(200,5,70,4), new THREE.MeshPhongMaterial({color:0xf5a945}));
-  obeject1.add(desktop);
-  return obeject1;
+ let loader = new THREE.TextureLoader();
+ loader.crossOrigin = '';
+ let texture = loader.load ('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSxWiEZTb-9doQmdx1HJkN_b1kDIoCkjsgX4utJ_vrs7YrKL1il&s');
+
+ var desktop = new THREE.Mesh(new THREE.BoxGeometry(140,8,68,4), new THREE.MeshPhongMaterial({map:texture,color:0x9a6600}));
+ obeject1.add(desktop);
+ desktop.position.set(0,68,0);
+ var top= new THREE.Mesh(new THREE.BoxGeometry(150,2,78,4), new THREE.MeshPhongMaterial({map:texture,color:0x9a6600}));  
+ desktop.add(top);
+desktop.castShadow = true;
+desktop.receiveShadow = true; 
+top.castShadow = true;
+top.receiveShadow = true; 
+ top.position.set(0,3.2,0);
+ var leg1= new THREE.Mesh(new THREE.CylinderGeometry(2.5,1,70), new THREE.MeshPhongMaterial({map:texture, color:0x9a6600}));
+ obeject1.add(leg1);
+ leg1.position.set(65,33,30);
+ leg1.rotation.z=Math.PI/8;
+  var leg2= new THREE.Mesh(new THREE.CylinderGeometry(2.5,1,70), new THREE.MeshPhongMaterial({map:texture, color:0x9a6600}));
+ obeject1.add(leg2);
+ leg2.position.set(65,33,-30);
+ leg2.rotation.z=Math.PI/8;
+  var leg3= new THREE.Mesh(new THREE.CylinderGeometry(2.5,1,70), new THREE.MeshPhongMaterial({map:texture, color:0x9a6600}));
+ obeject1.add(leg3);
+ leg3.position.set(-65,33,-30);
+ leg3.rotation.z=-Math.PI/8;
+  var leg4= new THREE.Mesh(new THREE.CylinderGeometry(2.5,1,70), new THREE.MeshPhongMaterial({map:texture, color:0x9a6600}));
+ obeject1.add(leg4);
+ leg4.position.set(-65,33,30);
+ leg4.rotation.z=-Math.PI/8;
+
+leg1.castShadow = true;
+leg1.receiveShadow = true; 
+leg2.castShadow = true;
+leg2.receiveShadow = true; 
+leg3.castShadow = true;
+leg3.receiveShadow = true; 
+leg4.castShadow = true;
+leg4.receiveShadow = true; 
 
 
+
+ var shelf= new THREE.Mesh(new THREE.BoxGeometry(145,12,18,4), new THREE.MeshPhongMaterial({map:texture,color:0x9a6600}));  
+ desktop.add(shelf);
+ shelf.position.set(0,10,-30);
+ var drawer1=new THREE.Mesh(new THREE.BoxGeometry(40,10,2), new THREE.MeshPhongMaterial({map:texture,color:0x9a6600}));  
+  var drawer2=new THREE.Mesh(new THREE.BoxGeometry(40,10,2), new THREE.MeshPhongMaterial({map:texture,color:0x9a6600})); 
+   var drawer3=new THREE.Mesh(new THREE.BoxGeometry(40,10,2), new THREE.MeshPhongMaterial({map:texture,color:0x9a6600})); 
+  var hand1 = new THREE.Mesh(new THREE.SphereGeometry(1), new THREE.MeshPhongMaterial({map:texture,color:0x341e0e}));
+var hand2 = new THREE.Mesh(new THREE.SphereGeometry(1), new THREE.MeshPhongMaterial({map:texture,color:0x341e0e}));
+var hand3 = new THREE.Mesh(new THREE.SphereGeometry(1), new THREE.MeshPhongMaterial({map:texture,color:0x341e0e}));
+ shelf.add(drawer1,drawer2,drawer3,hand1,hand2,hand3);
+drawer1.position.set(0,0,10);
+drawer2.position.set(-45,0,10);
+drawer3.position.set(45,0,10);
+hand1.position.set(0,0,12);
+hand2.position.set(-45,0,12);
+hand3.position.set(45,0,12);
+ return obeject1;
+ 
 
 
 }
@@ -376,7 +570,7 @@ function buildtea() {
    geometry.faceVertexUvs[0].push ([new THREE.Vector2(0,1), new THREE.Vector2(0,0), new THREE.Vector2(1,0) ]);
    geometry.faceVertexUvs[0].push ([new THREE.Vector2(1,0), new THREE.Vector2(1,1), new THREE.Vector2(0,1) ]);
  
-  geometry.faceVertexUvs[0].push ([new THREE.Vector2(1,0), new THREE.Vector2(0.5,1), new THREE.Vector2(0,0) ]);
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(1,0), new THREE.Vector2(0.5,1), new THREE.Vector2(0,0) ]);
 
    geometry.faceVertexUvs[0].push ([new THREE.Vector2(0,1), new THREE.Vector2(1,0), new THREE.Vector2(0,0) ]);
    geometry.faceVertexUvs[0].push ([new THREE.Vector2(1,1), new THREE.Vector2(1,0), new THREE.Vector2(0,1) ]);
@@ -419,6 +613,7 @@ function buildtea() {
  new THREE.MeshPhongMaterial ({map: texture10})
 
   );
+
   return new THREE.Mesh (geometry, materialArray);  
 }
 
@@ -467,7 +662,9 @@ function animate() {
   v2 += f2*dt;
   y2 += v2*dt
   light2.intensity = y2;
-
+  light3.intensity=y2;
+  if(chair!=undefined)
+  console.log(chair.children[0].children[0]);
   requestAnimationFrame(animate);
   render();
 
