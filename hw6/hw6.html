@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+<style>
+#info {
+  position: absolute;
+  top: 0px;
+  width: 100%;
+  padding: 10px;
+  text-align: center;
+  color: #ffffff
+}
+
+body {
+  overflow: hidden;
+}
+
+
+
+
+</style>
+</head>
+
+<body> 
+<div id="info">hw6-1<br>
+
+<script src="https://threejs.org/build/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js">
+</script>
+  <script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/loaders/MTLLoader.js"></script>
+  <script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/loaders/OBJLoader.js"></script>
+	<script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/misc/Gyroscope.js"></script>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+<script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/geometries/TeapotBufferGeometry.js"></script>
+
+
+
+
+<script id="myVertexShader-mono" type="x-shader/x-vertex">
+  varying vec2 vUv; 
+  void main() { 
+     gl_Position = projectionMatrix* modelViewMatrix * vec4( position, 1.0); 
+     vUv = uv; 
+  }
+</script>
+<script id="myFragmentShader-mono" type="x-shader/x-fragment">
+  uniform sampler2D texture; 
+  varying vec2 vUv; 
+  
+  vec3 rgb2hsv(vec3 c) {
+    vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+
+    float d = q.x - min(q.w, q.y);
+    float e = 1.0e-10;
+    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+  }
+  vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+  }
+  
+  void main() { 
+    vec3 color = texture2D (texture, vUv).rgb;
+    vec3 hh = rgb2hsv (color);
+    hh.y = 0.0;  // set saturation to 0
+    vec3 cc = hsv2rgb (hh);
+    gl_FragColor = vec4 (cc, 1.0); 
+  }
+</script>
+<script id="myVertexShader" type="x-shader/x-vertex">
+  uniform vec3 lightpos;
+  varying float ndotl;
+  varying vec3 lightdir;
+  varying vec3 eyenorm;
+  
+  void main() {
+    gl_Position = projectionMatrix* modelViewMatrix * vec4( position, 1.0);
+    
+    //vec4 worldpos = modelMatrix * vec4 (position, 1.0);
+    //ndotl = dot (normalize(lightpos.xyz - worldpos.xyz), normal);
+    vec4 eyepos = modelViewMatrix * vec4 (position, 1.0);
+    vec4 lighteye = viewMatrix * vec4 (lightpos, 1.0);
+    lightdir = lighteye.xyz - eyepos.xyz;
+    eyenorm = normalMatrix * normal;
+  }
+</script>
+<script id="myFragmentShader" type="x-shader/x-fragment">
+  varying float ndotl;
+  varying vec3 lightdir;
+  varying vec3 eyenorm;
+  
+  void main() {
+    float nn = dot (normalize(lightdir), normalize(eyenorm));
+    if (nn > 0.8) {
+      nn= 0.9;
+    } else if (nn > 0.6) {
+      nn = 0.6;
+    } else {
+      nn = 0.2;
+    }
+    gl_FragColor = vec4 (nn*.110/.255,nn*.168/.255,nn*.198/.225, 1.0);
+  }
+</script>
+
+
+<script>
+javascript:(function(){var script=document.createElement('script');script.onload=function(){var stats=new Stats();document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='https://mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);})()
+
+
+
+var camera, scene, renderer,light,light2,light3;
+var lamp,desk,pencilbox,book;
+var pickables = [];
+var raycaster = new THREE.Raycaster();
+var mouse = new THREE.Vector2();
+var tea,teapot,pointLight;
+var meshMaterial,angle=0;
+
+
+
+init();
+animate();
+
+function init() {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  scenecolor = new THREE.Scene();
+  sceneGrey = new THREE.Scene();
+  renderer = new THREE.WebGLRenderer({
+    antialias: true
+  });
+  renderer.setSize(width, height);
+  document.body.appendChild(renderer.domElement);
+  renderer.setClearColor(0x888888);
+  
+  renderer.autoClear = false;
+
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 1000);
+  camera.position.z = 130;
+  camera.position.y=190;
+  let controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+  ////////////////////////////////////////////////////////////////
+  var gridXZ = new THREE.GridHelper(200, 20, 'red', 'white');
+  //scene.add(gridXZ);
+
+  directionalLight = new THREE.DirectionalLight(0xffffff);
+  directionalLight.position.set(10, 5, 5).normalize();
+  sceneGrey.add(directionalLight);
+
+
+
+  //scene.add (slhelper)
+  //scene.add(lschelper);
+
+    meshMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      lightpos: {
+        type: 'v3',
+        value: new THREE.Vector3(0, 30, 20)
+      }
+    },
+    vertexShader: document.getElementById('myVertexShader').textContent,
+    fragmentShader: document.getElementById('myFragmentShader').textContent
+  });
+
+
+
+
+  readlamp();
+  let loader = new THREE.TextureLoader();
+  loader.crossOrigin = '';
+  let texture = loader.load ('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS3weWUGfzDvn1DInfcssT5xLTsWif7AIU1vvBnFm1LhFTfG8vc7A&s');
+  texture.repeat.set(6, 6);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  var floor = new THREE.Mesh(new THREE.PlaneGeometry(500,500), new THREE.MeshPhongMaterial({map:texture,side:THREE.DoubleSide}));
+  floor.receiveShadow = true;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
+
+  floor.rotation.x=-Math.PI/2;
+  tea=buildtea();
+  desk=builddesk();
+  book=buildbook();
+  pencilbox=buildpencil();
+  tea.scale.set(0.5,0.5,.5);
+  tea.position.set(20,72,0);
+  tea.rotation.y=-Math.PI/5;
+  sceneGrey.add (tea,book,floor,desk,pencilbox);
+  //tea.position.set(0,100,0)
+  ///////////////////
+   pointLight = new THREE.PointLight( 0xfffffff, 1, 1000 );
+  pointLight.position.set( 10,150, 10 );
+  scenecolor.add( pointLight );
+  pointLight.castShadow = true;            // default false
+
+  var sphereSize = 2;
+  var pointLightHelper = new THREE.PointLightHelper( pointLight, sphereSize );
+  scenecolor.add( pointLightHelper );
+  teapot = new THREE.Mesh (new THREE.TeapotBufferGeometry(4), meshMaterial);
+  scenecolor.add(teapot);
+ teapot.position.y=76;
+ teapot.position.x=4;
+  renderTarget = new THREE.WebGLRenderTarget (width, height); 
+  document.addEventListener('mousedown', onDocumentMouseDown, false)
+
+
+
+  ////////////////////
+     var uniforms = {
+    texture: {
+      type: 't',
+      value: renderTarget.texture
+    } ,
+  };
+
+  scene0 = new THREE.Scene();
+  camera0 = new THREE.OrthographicCamera (0, width, height, 0,-10,100);
+  
+  var vertShader = document.getElementById('myVertexShader-mono').textContent;
+  var fragShader = document.getElementById('myFragmentShader-mono').textContent;
+  shaderMaterial = new THREE.ShaderMaterial({
+    uniforms: uniforms,
+    vertexShader: vertShader,
+    fragmentShader: fragShader,
+    
+    depthTest: false,  // no depth test
+    depthWrite: false  // do not write depth buffer
+  });
+
+  // plane geometry filled the entire screen
+  var plane0 = new THREE.Mesh (new THREE.PlaneGeometry(width, height), shaderMaterial);
+  scene0.add (plane0);
+  plane0.position.set (width/2, height/2, 0);
+  ///////////////////////
+
+}
+
+
+
+function readlamp(targetSize=40) {
+
+  var onProgress = function(xhr) {
+    if (xhr.lengthComputable) {
+      var percentComplete = xhr.loaded / xhr.total * 100;
+      console.log(Math.round(percentComplete, 2) + '% downloaded');
+    }
+  };
+
+  var onError = function(xhr) {};
+
+  var mtlLoader = new THREE.MTLLoader();
+  mtlLoader.setPath('https://leooooii.github.io/CGhw/hw4/lamp/');
+  mtlLoader.load('materials'+'.mtl', function(materials) {
+
+    materials.preload();
+
+    var objLoader = new THREE.OBJLoader();
+    objLoader.setMaterials(materials);
+    objLoader.setPath('https://leooooii.github.io/CGhw/hw4/lamp/');
+    objLoader.load('model'+'.obj', function(object) {
+    
+    lamp =  unitize1 (object, targetSize);
+    //theObject.add ( new THREE.BoxHelper (theObject) )
+    lamp.name = 'light'
+    sceneGrey.add(lamp);
+    lamp.children[0].children[0].castShadow = true;
+    lamp.children[0].children[0].receiveShadow = true; 
+    }, onProgress, onError);
+
+  });
+
+}
+function unitize1 (object, targetSize) {  
+  
+  // find bounding box of 'object'
+  var box3 = new THREE.Box3();
+  box3.setFromObject (object);
+  var size = new THREE.Vector3();
+  size.subVectors (box3.max, box3.min);
+  var center = new THREE.Vector3();
+  center.addVectors(box3.max, box3.min).multiplyScalar (1);
+  
+  //console.log ('center: ' + center.x + ', '+center.y + ', '+center.z );
+  //console.log ('size: ' + size.x + ', ' +  size.y + ', '+size.z );
+  
+  // uniform scaling according to objSize
+  var objSize = Math.max (size.x, size.y, size.z);
+  var scaleSet = targetSize/objSize;
+        
+  var theObject =  new THREE.Object3D();
+
+  theObject.add (object);
+  object.scale.set (scaleSet, scaleSet, scaleSet);
+  object.position.set(-50,93.5,-10);
+  object.rotation.y=Math.PI/4;
+  //object.position.set (-center.x*scaleSet, -center.y*scaleSet, -center.z*scaleSet);
+  return theObject;
+
+}
+
+function buildpencil(){
+ var object = new THREE.Object3D();
+   let loader = new THREE.TextureLoader();
+  loader.crossOrigin = '';
+  let matArray = [];
+  matArray.push(new THREE.MeshPhongMaterial({
+  map: loader.load('https://i.imgur.com/gMPRWuf.png'),
+    alphaTest: 0.5,
+    side: THREE.DoubleSide,
+    color:0xf96266
+  }));
+  matArray.push(new THREE.MeshPhongMaterial( { 
+  map: loader.load('https://i.imgur.com/gMPRWuf.png'),
+    alphaTest: 0.5,
+    side: THREE.DoubleSide,
+        color:0xf96266
+  }));
+  matArray.push(new THREE.MeshPhongMaterial({
+    visible:false
+  }));
+  matArray.push(new THREE.MeshPhongMaterial({
+    map: loader.load('https://i.imgur.com/gMPRWuf.png'),
+    alphaTest: 0.5,
+    side: THREE.DoubleSide,
+        color:0xf96266
+  }));
+  matArray.push(new THREE.MeshPhongMaterial({
+    map: loader.load('https://i.imgur.com/gMPRWuf.png'),
+    alphaTest: 0.5,
+    side: THREE.DoubleSide,
+        color:0xf96266
+  }));
+  matArray.push(new THREE.MeshPhongMaterial({
+    map: loader.load('https://i.imgur.com/gMPRWuf.png'),
+    alphaTest: 0.5,
+    side: THREE.DoubleSide,
+        color:0xf96266
+  }));
+  var box = new THREE.Mesh(new THREE.BoxGeometry(6, 10, 6), matArray);
+  box.castShadow = true;
+  box.receiveShadow = true; 
+  var pencil1=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,12,70), new THREE.MeshPhongMaterial({color:0xf16266}));
+  var head1=new THREE.Mesh(new THREE.CylinderGeometry(.1,.3,1,70), new THREE.MeshPhongMaterial({color:0x9a6600}));
+  var color1=new THREE.Mesh(new THREE.CylinderGeometry(.01,.1,.3,70), new THREE.MeshPhongMaterial({color:0xf16266}));
+  box.add(pencil1);
+  pencil1.add(head1);
+  head1.add(color1);
+  color1.position.set(0,0.65,0);
+  head1.position.set(0,6.5,0);
+  pencil1.position.set(-1,2,0);
+  pencil1.rotation.x=Math.PI/6;
+  ///////////////////
+   var pencil2=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,12,70), new THREE.MeshPhongMaterial({color:0xc4e9c5}));
+  var head2=new THREE.Mesh(new THREE.CylinderGeometry(.1,.3,1,70), new THREE.MeshPhongMaterial({color:0x9a6600}));
+  var color2=new THREE.Mesh(new THREE.CylinderGeometry(.01,.1,.3,70), new THREE.MeshPhongMaterial({color:0xc4e9c5}));
+  box.add(pencil2);
+  pencil2.add(head2);
+  head2.add(color2);
+  color1.position.set(0,0.65,0);
+  head2.position.set(0,6.5,0);
+  pencil2.position.set(1,2,0);
+  pencil2.rotation.x=-Math.PI/6;
+
+  object.add(box)
+  object.position.set(30, 78, -10)
+  object.rotation.y = Math.PI / 3;
+  return object;
+
+}
+function buildbook(){
+ var object = new THREE.Object3D();
+   let loader = new THREE.TextureLoader();
+  loader.crossOrigin = '';
+  let matArray = [];
+  matArray.push(new THREE.MeshPhongMaterial({
+  map: loader.load('https://i.imgur.com/2p8XxDv.jpg'),/////right
+    side: THREE.DoubleSide,
+  }));
+  matArray.push(new THREE.MeshPhongMaterial( { 
+  map: loader.load('https://i.imgur.com/2p8XxDv.jpg'),
+    side: THREE.DoubleSide,
+  }));
+  matArray.push(new THREE.MeshPhongMaterial({
+    map: loader.load('https://i.imgur.com/1vp7OEL.jpg'),//cover
+    side: THREE.DoubleSide,
+  }));
+  matArray.push(new THREE.MeshPhongMaterial({
+    map: loader.load('https://i.imgur.com/2p8XxDv.jpg'),
+    side: THREE.DoubleSide,
+  }));
+  matArray.push(new THREE.MeshPhongMaterial({
+    map: loader.load('https://i.imgur.com/nzj5zSA.jpg'),//down
+    side: THREE.DoubleSide,
+  }));
+  matArray.push(new THREE.MeshPhongMaterial({
+    map: loader.load('https://i.imgur.com/nzj5zSA.jpg'),//left
+    side: THREE.DoubleSide,
+  }));
+  var box = new THREE.Mesh(new THREE.BoxGeometry(12, 2, 16), matArray);
+  box.castShadow = true;
+  box.receiveShadow = true; 
+
+  object.add(box)
+  object.position.set(-30, 73, 10)
+  return object;
+
+}
+function builddesk(){
+ var obeject1 = new THREE.Object3D();
+ let loader = new THREE.TextureLoader();
+ loader.crossOrigin = '';
+ let texture = loader.load ('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSxWiEZTb-9doQmdx1HJkN_b1kDIoCkjsgX4utJ_vrs7YrKL1il&s');
+
+ var desktop = new THREE.Mesh(new THREE.BoxGeometry(140,8,68,4), new THREE.MeshPhongMaterial({map:texture,color:0x9a6600}));
+ obeject1.add(desktop);
+ desktop.position.set(0,68,0);
+ var top= new THREE.Mesh(new THREE.BoxGeometry(150,2,78,4), new THREE.MeshPhongMaterial({map:texture,color:0x9a6600}));  
+ desktop.add(top);
+desktop.castShadow = true;
+desktop.receiveShadow = true; 
+top.castShadow = true;
+top.receiveShadow = true; 
+ top.position.set(0,3.2,0);
+ var leg1= new THREE.Mesh(new THREE.CylinderGeometry(2.5,1,70), new THREE.MeshPhongMaterial({map:texture, color:0x9a6600}));
+ obeject1.add(leg1);
+ leg1.position.set(65,33,30);
+ leg1.rotation.z=Math.PI/8;
+  var leg2= new THREE.Mesh(new THREE.CylinderGeometry(2.5,1,70), new THREE.MeshPhongMaterial({map:texture, color:0x9a6600}));
+ obeject1.add(leg2);
+ leg2.position.set(65,33,-30);
+ leg2.rotation.z=Math.PI/8;
+  var leg3= new THREE.Mesh(new THREE.CylinderGeometry(2.5,1,70), new THREE.MeshPhongMaterial({map:texture, color:0x9a6600}));
+ obeject1.add(leg3);
+ leg3.position.set(-65,33,-30);
+ leg3.rotation.z=-Math.PI/8;
+  var leg4= new THREE.Mesh(new THREE.CylinderGeometry(2.5,1,70), new THREE.MeshPhongMaterial({map:texture, color:0x9a6600}));
+ obeject1.add(leg4);
+ leg4.position.set(-65,33,30);
+ leg4.rotation.z=-Math.PI/8;
+
+leg1.castShadow = true;
+leg1.receiveShadow = true; 
+leg2.castShadow = true;
+leg2.receiveShadow = true; 
+leg3.castShadow = true;
+leg3.receiveShadow = true; 
+leg4.castShadow = true;
+leg4.receiveShadow = true; 
+
+
+
+ var shelf= new THREE.Mesh(new THREE.BoxGeometry(145,12,18,4), new THREE.MeshPhongMaterial({map:texture,color:0x9a6600}));  
+ desktop.add(shelf);
+ shelf.position.set(0,10,-30);
+ var drawer1=new THREE.Mesh(new THREE.BoxGeometry(40,10,2), new THREE.MeshPhongMaterial({map:texture,color:0x9a6600}));  
+  var drawer2=new THREE.Mesh(new THREE.BoxGeometry(40,10,2), new THREE.MeshPhongMaterial({map:texture,color:0x9a6600})); 
+   var drawer3=new THREE.Mesh(new THREE.BoxGeometry(40,10,2), new THREE.MeshPhongMaterial({map:texture,color:0x9a6600})); 
+  var hand1 = new THREE.Mesh(new THREE.SphereGeometry(1), new THREE.MeshPhongMaterial({map:texture,color:0x341e0e}));
+var hand2 = new THREE.Mesh(new THREE.SphereGeometry(1), new THREE.MeshPhongMaterial({map:texture,color:0x341e0e}));
+var hand3 = new THREE.Mesh(new THREE.SphereGeometry(1), new THREE.MeshPhongMaterial({map:texture,color:0x341e0e}));
+ shelf.add(drawer1,drawer2,drawer3,hand1,hand2,hand3);
+drawer1.position.set(0,0,10);
+drawer2.position.set(-45,0,10);
+drawer3.position.set(45,0,10);
+hand1.position.set(0,0,12);
+hand2.position.set(-45,0,12);
+hand3.position.set(45,0,12);
+ return obeject1;
+ 
+
+
+}
+function buildtea() {
+  let geometry = new THREE.Geometry();
+  let sq11 = Math.sqrt(11);
+  geometry.vertices.push ( new THREE.Vector3(-5, 0, 5) );//0
+  geometry.vertices.push ( new THREE.Vector3( 5, 0, 5) );//1
+  geometry.vertices.push ( new THREE.Vector3( 5,12, 5) );//2
+  geometry.vertices.push ( new THREE.Vector3( 5, 12+sq11, 0) );//3
+  geometry.vertices.push ( new THREE.Vector3(-5, 12+sq11, 0) );//4
+  geometry.vertices.push ( new THREE.Vector3(-5, 12, 5) );//5
+  geometry.vertices.push ( new THREE.Vector3(-5, 0, -5) );//6
+  geometry.vertices.push ( new THREE.Vector3( -5,12, -5) );//7
+  geometry.vertices.push ( new THREE.Vector3(0, 12+sq11, 0) );//8
+  geometry.vertices.push ( new THREE.Vector3( 5,12, -5) );//9
+  geometry.vertices.push ( new THREE.Vector3(5, 0, -5) );//10
+
+  geometry.vertices.push ( new THREE.Vector3(-5, 12+sq11+1.5, 0) );//11
+  geometry.vertices.push ( new THREE.Vector3(5, 12+sq11+1.5, 0) );//12
+
+  let face;
+  face = new THREE.Face3 ( 0, 1, 2 ); face.materialIndex = 0;////frontdown
+  geometry.faces.push (face);
+  face = new THREE.Face3 ( 0, 2, 5 ); face.materialIndex = 0;
+  geometry.faces.push (face);
+
+  face = new THREE.Face3 ( 2, 3, 5 ); face.materialIndex = 1;///frontup
+  geometry.faces.push (face);
+  face = new THREE.Face3 ( 3, 4, 5 ); face.materialIndex = 1;
+  geometry.faces.push (face);
+
+  face = new THREE.Face3 ( 7, 6, 0 ); face.materialIndex = 2;///////leftdown
+  geometry.faces.push (face);
+  face = new THREE.Face3 ( 0, 5, 7 ); face.materialIndex = 2;
+  geometry.faces.push (face);
+
+  face = new THREE.Face3 ( 8, 7, 5 ); face.materialIndex = 6;//////leftup
+  geometry.faces.push (face);
+
+  face = new THREE.Face3 ( 6, 7, 10 ); face.materialIndex = 0;///backdown
+  geometry.faces.push (face);
+  face = new THREE.Face3 ( 10, 7, 9 ); face.materialIndex = 0;
+  geometry.faces.push (face);
+
+  face = new THREE.Face3 ( 7, 3, 9 ); face.materialIndex = 4;///backup
+  geometry.faces.push (face);
+  face = new THREE.Face3 ( 7, 4, 3 ); face.materialIndex = 4;
+  geometry.faces.push (face);
+
+  face = new THREE.Face3 ( 2, 1, 10 ); face.materialIndex = 5;/////rightside
+  geometry.faces.push (face);
+  face = new THREE.Face3 ( 10, 9, 2 ); face.materialIndex = 5;
+  geometry.faces.push (face);
+
+ face = new THREE.Face3 ( 9, 8, 2 ); face.materialIndex = 3;///rightup
+ geometry.faces.push (face);
+
+  face = new THREE.Face3 ( 6, 1, 0 ); face.materialIndex = 7;/////bottom
+  geometry.faces.push (face);
+  face = new THREE.Face3 ( 10, 1, 6 ); face.materialIndex = 7;
+  geometry.faces.push (face);
+
+   face = new THREE.Face3 ( 11, 12, 4 ); face.materialIndex = 8;/////backupup
+  geometry.faces.push (face);
+  face = new THREE.Face3 ( 12, 3, 4 ); face.materialIndex = 8;
+  geometry.faces.push (face);
+   
+   face = new THREE.Face3 ( 4, 12,11 ); face.materialIndex = 9;/////backupup
+  geometry.faces.push (face);
+  face = new THREE.Face3 ( 4, 3, 12 ); face.materialIndex = 9;
+  geometry.faces.push (face);
+
+
+  geometry.faceVertexUvs[0].push ([new THREE.Vector2(0,0), new THREE.Vector2(1,0), new THREE.Vector2(1,1) ]);
+  geometry.faceVertexUvs[0].push ([new THREE.Vector2(0,0), new THREE.Vector2(1,1), new THREE.Vector2(0,1) ]);
+  
+  geometry.faceVertexUvs[0].push ([new THREE.Vector2(1,0), new THREE.Vector2(1,1), new THREE.Vector2(0,0) ]);
+  geometry.faceVertexUvs[0].push ([new THREE.Vector2(1,1), new THREE.Vector2(0,1), new THREE.Vector2(0,0) ]);
+
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(0,1), new THREE.Vector2(0,0), new THREE.Vector2(1,0) ]);
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(1,0), new THREE.Vector2(1,1), new THREE.Vector2(0,1) ]);
+
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(0.5,1), new THREE.Vector2(0.0), new THREE.Vector2(1,0) ]);
+
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(1,0), new THREE.Vector2(1,1), new THREE.Vector2(0,0) ]);
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(0,0), new THREE.Vector2(1,1), new THREE.Vector2(0,1) ]);
+
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(1,0), new THREE.Vector2(0,1), new THREE.Vector2(0,0) ]);
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(1,0), new THREE.Vector2(1,1), new THREE.Vector2(0,1) ]);
+
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(0,1), new THREE.Vector2(0,0), new THREE.Vector2(1,0) ]);
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(1,0), new THREE.Vector2(1,1), new THREE.Vector2(0,1) ]);
+ 
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(1,0), new THREE.Vector2(0.5,1), new THREE.Vector2(0,0) ]);
+
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(0,1), new THREE.Vector2(1,0), new THREE.Vector2(0,0) ]);
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(1,1), new THREE.Vector2(1,0), new THREE.Vector2(0,1) ]);
+
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(1,1), new THREE.Vector2(0,1), new THREE.Vector2(1,0) ]);
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(0,1), new THREE.Vector2(0,0), new THREE.Vector2(1,0) ]);
+
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(0,0), new THREE.Vector2(1,1), new THREE.Vector2(0,1) ]);
+   geometry.faceVertexUvs[0].push ([new THREE.Vector2(0,0), new THREE.Vector2(1,0), new THREE.Vector2(1,1) ]);
+
+ // geometry.computeBoundingSphere();
+  geometry.computeFaceNormals();
+ // geometry.computeVertexNormals();
+  
+  let loader = new THREE.TextureLoader();
+  loader.crossOrigin = '';
+  let texture1 = loader.load ('https://i.imgur.com/rMsMrad.jpg');
+  let texture2 = loader.load ('https://i.imgur.com/Ot2N6b8.jpg');
+  let texture3 = loader.load ('https://i.imgur.com/FA3AV2k.jpg');
+  let texture4 = loader.load ('https://i.imgur.com/mWvAoa6.jpg');
+
+  let texture5 = loader.load ('https://i.imgur.com/sydUrcV.jpg');
+  let texture6 = loader.load ('https://i.imgur.com/MAIQSqz.jpg');
+  let texture7 = loader.load ('https://i.imgur.com/hwUyqdb.jpg');
+  let texture8 = loader.load ('https://i.imgur.com/ubuxR5I.jpg');
+  
+  let texture9 = loader.load ('https://i.imgur.com/cYfbGAh.jpg');
+  let texture10 = loader.load ('https://i.imgur.com/SoFKKwx.jpg');
+  
+  materialArray = [];
+  materialArray.push (new THREE.MeshPhongMaterial ({map: texture1}), 
+  new THREE.MeshPhongMaterial({map: texture5,side: THREE.DoubleSide}), 
+  new THREE.MeshPhongMaterial ({map: texture3}),
+  new THREE.MeshPhongMaterial ({map: texture4}),
+  new THREE.MeshPhongMaterial({map: texture2,side: THREE.DoubleSide}),
+  new THREE.MeshPhongMaterial ({map: texture6}),
+    new THREE.MeshPhongMaterial ({map: texture7}),
+ new THREE.MeshPhongMaterial ({map: texture8}),
+ new THREE.MeshPhongMaterial ({map: texture9}),
+ new THREE.MeshPhongMaterial ({map: texture10})
+
+  );
+
+  return new THREE.Mesh (geometry, materialArray);  
+}
+
+function onDocumentMouseDown(event) {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  // find intersections
+  raycaster.setFromCamera(mouse, camera);
+  var intersects = raycaster.intersectObjects(pickables, false);
+
+}
+function animate() {
+   angle += 0.01;
+ pointLight.position.set (40*Math.cos(angle), 120, 40*Math.sin(angle));
+   meshMaterial.uniforms.lightpos.value.copy(pointLight.position);
+ renderer.setRenderTarget (renderTarget);
+  renderer.clear();  // clear the buffers of render target 
+  sceneGrey.traverse ( function (obj) {
+    if (obj instanceof THREE.Mesh)
+      obj.material.colorWrite = true;
+  });
+  
+  renderer.render(sceneGrey, camera);
+
+  // switch to screen output    
+  renderer.setRenderTarget (null);
+  renderer.clearColor();  // clear screen buffers
+  renderer.render(scene0, camera0);
+  
+  // set up blockers from sceneGrey (colorWrite is disabled)
+  // normalMat.colorWrite = false;
+  sceneGrey.traverse ( function (obj) {
+    if (obj instanceof THREE.Mesh)
+      obj.material.colorWrite = false;
+  });
+  renderer.render (sceneGrey, camera);
+ renderer.render(scenecolor, camera);
+  requestAnimationFrame(animate);
+ // render();
+
+}
+
+function render() {
+
+  renderer.render(scene, camera);
+
+}
+
+</script>
+</body>
+
+</html>
