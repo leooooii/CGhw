@@ -168,7 +168,7 @@ animate();
 function init() {
   width = window.innerWidth;
   height = window.innerHeight;
-  renderer = new THREE.WebGLRenderer({
+ renderer = new THREE.WebGLRenderer({
     antialias: true
   });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -196,23 +196,23 @@ function init() {
   // camera0: ortho camera
   
   scene0 = new THREE.Scene();
-  subject = new THREE.Mesh (new THREE.TeapotBufferGeometry(10),
+  subject = new THREE.Mesh (new THREE.TeapotBufferGeometry(8),
   material_shh_normal);
-  scene.add (subject);
+  scene0.add (subject);
   camera0 = new THREE.OrthographicCamera (-20,20,20,-20,-200,200);
     
   ////////////////////////////////////////////////////////
 
-  renderTarget2 = new THREE.WebGLRenderTarget( 512,512);
+  renderTarget = new THREE.WebGLRenderTarget( 512,512);
 
   var uniforms = {
     imageSize: {
-    	type: 'i',
-      value: renderTarget2.width
+      type: 'i',
+      value: renderTarget.width
     },
     texture: {
-    	type: 't',
-      value: renderTarget2.texture
+      type: 't',
+      value: renderTarget.texture
     }
   };
 
@@ -236,9 +236,9 @@ function init() {
   subjectClone.material = new THREE.MeshPhongMaterial();
   sceneRegular.add(subjectClone);
   
- pointLight1 = new THREE.PointLight(0xffffff);
-  pointLight1.position.set(0, 300, 200);
-  sceneRegular.add(pointLight1);
+ pointLight2 = new THREE.PointLight(0xffffff);
+  pointLight2.position.set(0, 300, 200);
+  sceneRegular.add(pointLight2);
 
   var ambientLight = new THREE.AmbientLight(0x555555);
   sceneRegular.add(ambientLight);
@@ -257,9 +257,12 @@ function init() {
     fragmentShader: document.getElementById('fsCut').textContent
    });
    
-   planeXX = new THREE.Mesh (new THREE.PlaneGeometry (20,20), cutoutShaderMat);
-   scene0.add (planeXX);
-   planeXX.position.y =78;
+   planeXX = new THREE.Mesh (new THREE.PlaneGeometry (50,50), cutoutShaderMat);
+   scene.add (planeXX);
+   planeXX.position.y = 83;
+  
+
+  sceneGrey = new THREE.Scene();
    readlamp();
   let loader = new THREE.TextureLoader();
   loader.crossOrigin = '';
@@ -280,20 +283,20 @@ function init() {
   desk=builddesk();
   book=buildbook();
   pencilbox=buildpencil();
-  scene.add (tea,book,floor,desk,pencilbox);
+  sceneGrey.add (tea,book,floor,desk,pencilbox);
   pointLight = new THREE.PointLight( 0xfffffff, 1, 1000 );
   pointLight.position.set( 10,150, 10 );
-  scene.add( pointLight );
+  sceneGrey.add( pointLight );
   pointLight.castShadow = true;            // default false
 
   var sphereSize = 2;
   var pointLightHelper = new THREE.PointLightHelper( pointLight, sphereSize );
-  scene.add( pointLightHelper );
-  renderTarget = new THREE.WebGLRenderTarget (width, height); 
+  sceneGrey.add( pointLightHelper );
+  renderTarget2 = new THREE.WebGLRenderTarget (width, height); 
      var uniformss = {
     texture: {
       type: 't',
-      value: renderTarget.texture
+      value: renderTarget2.texture
     } ,
   };
 
@@ -319,6 +322,8 @@ function init() {
   var plane0 = new THREE.Mesh (new THREE.PlaneGeometry(width, height), shaderMaterial);
   scene1.add (plane0);
   plane0.position.set (width/2, height/2, 0);
+
+
 }
 
 function onWindowResize() {
@@ -351,7 +356,7 @@ mtlLoader.load('materials'+'.mtl', function(materials) {
   lamp =  unitize1 (object, targetSize);
   //theObject.add ( new THREE.BoxHelper (theObject) )
   lamp.name = 'light'
-  scene.add(lamp);
+  sceneGrey.add(lamp);
   lamp.children[0].children[0].castShadow = true;
   lamp.children[0].children[0].receiveShadow = true; 
   }, onProgress, onError);
@@ -699,8 +704,8 @@ return new THREE.Mesh (geometry, materialArray);
 
 function animate() {
    angle += 0.01;
- pointLight.position.set (40*Math.cos(angle), 120, 40*Math.sin(angle));
- pointLight1.position.set (40*Math.cos(angle), 120, 40*Math.sin(angle));
+   pointLight.position.set (40*Math.cos(angle), 120, 40*Math.sin(angle));
+   pointLight2.position.set (40*Math.cos(angle), 120, 40*Math.sin(angle));
 
   material_shh.uniforms.imageSize.value = 60;
   // this value can alter the width of silhouette !!
@@ -709,7 +714,7 @@ function animate() {
   
   
   // scene0: torusKnot with shaderMaterial (draw eyeNormal)
-  renderer.setRenderTarget (renderTarget2);
+  renderer.setRenderTarget (renderTarget);
   renderer.setClearColor (0x000000);
   renderer.clear();
   renderer.render (scene0, camera0);  // produce eyeNormal plot of subject
@@ -724,14 +729,62 @@ function animate() {
   renderer.render(sceneRegular, camera0); // camera0: the same as eyeNormal plot
 
   ///////// final texture completed (except boundary removal)  
-  planeXX.lookAt (camera.position.x, 20, camera.position.z);
+  planeXX.lookAt (camera.position.x, 25, camera.position.z);
   
   renderer.setRenderTarget (null);
   renderer.setClearColor (0x888888);
   renderer.clear();
   renderer.render (scene, camera);  // planeXX (in scene) contains a shaderMaterial to cutout border
 
-  renderer.setRenderTarget (renderTarget);
+   renderer.setRenderTarget (renderTarget2);
+  renderer.clear();  // clear the buffers of render target 
+
+  // normalMat.colorWrite = true;
+  sceneGrey.traverse ( function (obj) {
+    if (obj instanceof THREE.Mesh) {
+       // handle mesh with materialArray
+       if (Array.isArray(obj.material)) {
+        obj.material.forEach (function(m){
+          m.colorWrite = true;
+        })
+       } else
+      obj.material.colorWrite = true;
+    }
+  });
+  
+  renderer.render(sceneGrey, camera);
+
+  // switch to screen output    
+  renderer.setRenderTarget (null);
+  renderer.clearColor();  // clear screen buffers
+  renderer.render(scene1, camera1);
+  
+  // set up blockers from sceneGrey (colorWrite is disabled)
+  // normalMat.colorWrite = false;
+  sceneGrey.traverse ( function (obj) {
+    if (obj instanceof THREE.Mesh) {
+       // handle mesh with materialArray
+       if (Array.isArray(obj.material)) {
+        obj.material.forEach (function(m){
+          m.colorWrite = false;
+        })
+       } else
+      obj.material.colorWrite = false;
+    }
+  });
+/*
+  sceneGrey.traverse ( function (obj) {
+    if (obj instanceof THREE.Mesh)
+      obj.material.colorWrite = false;
+  });
+*/  
+  renderer.render (sceneGrey, camera);
+  
+  // render sceneColor
+  renderer.render(scene, camera);
+
+
+  /*renderer.setRenderTarget (renderTarget);
   renderer.clear();  // clear the buffers of render target 
   scene.traverse ( function (obj) {
     if (obj instanceof THREE.Mesh) {
@@ -767,7 +820,10 @@ function animate() {
   });
 
   renderer.render (scene, camera);
-  renderer.render (scene0, camera);
+  renderer.render (scene0, camera);*/
+
+
+
   
   // render sceneColor
   //renderer.render(sceneRegular, camera);
