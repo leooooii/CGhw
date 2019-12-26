@@ -29,7 +29,7 @@
 
 <body> 
 <div id="info">
-  <br> hw6-2
+  <br> hw6-3
 </div>
 <script src="https://threejs.org/build/three.min.js"></script>
 <script src="https://threejs.org/examples/js/controls/OrbitControls.js">
@@ -39,7 +39,7 @@
 	<script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/misc/Gyroscope.js"></script>
 <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
 <script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/geometries/TeapotBufferGeometry.js"></script>
-
+<script src="https://raw.githack.com/mrdoob/three.js/master/examples/js/utils/BufferGeometryUtils.js"></script>
 <!-- shader for eyeNormal Plot -->
 <script id="vsNormal" type="x-shader/x-vertex">
   varying vec3 vNormal;
@@ -150,6 +150,132 @@
     gl_FragColor = vec4 (cc, 1.0); 
   }
 </script>
+<script id="vs-normalmap" type="x-shader/x-vertex">
+    uniform vec3 lightpos;
+
+  attribute vec4 tangent;
+  varying vec2 vUv;
+  varying vec3 vTangent;
+  varying vec3 vBitangent;
+  varying vec3 vNormal;
+  varying vec3 vLL;
+
+  void main() {
+    vec4 vWorldpos = modelMatrix * vec4( position, 1.0 ) ;
+    vec2 myrepeat = vec2 (1.0, 1.0);
+    vUv = myrepeat*uv;
+
+      gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+    // TBN in eyespace 
+    // no need to normalize these varying variable
+    // as they will be normalized in fragment shader
+    //
+        vNormal = normalMatrix * normal ;
+    vTangent = normalMatrix * tangent.xyz ;
+    vBitangent = cross( vNormal, vTangent ) ;
+
+    vLL = normalMatrix * (lightpos - vWorldpos.xyz);
+  }
+
+</script> 
+<script id='fs-normalmap' type="x-shader/x-vertex">
+  
+  uniform sampler2D tNormal;
+  varying vec2 vUv;
+  varying vec3 vTangent;
+  varying vec3 vBitangent;
+  varying vec3 vNormal;
+  varying vec3 vLL;
+
+  void main() {
+    
+    vec3 normalTex = texture2D (tNormal, vUv).xyz * 2.0 - 1.0;
+    normalTex.xy *= 6.0;    // exaggerate the normal deviation
+    normalTex = normalize( normalTex );
+
+    mat3 tsb = mat3( normalize( vTangent ), normalize( vBitangent ), normalize( vNormal ) );
+    vec3 finalNormal = tsb * normalTex;
+    float ndotl = dot (normalize (vLL), normalize (finalNormal));
+    gl_FragColor = vec4( vec3(ndotl), 1 );
+
+  }
+</script>
+<script id="vs-sobel" type="x-shader/x-vertex">
+  varying vec2 vUv; 
+  void main() { 
+     gl_Position = projectionMatrix* modelViewMatrix * vec4( position, 1.0); 
+     vUv = uv; 
+  }
+</script>
+<script id="fs-sobel" type="x-shader/x-fragment">
+  uniform sampler2D texture; 
+  uniform vec2 imageSize;
+  varying vec2 vUv; 
+  float step_w = 1.0/imageSize.x; 
+  float step_h = 1.0/imageSize.y; 
+  void main() { 
+    float kernel[9];
+     
+    vec2 offset[9]; 
+    offset[0]=vec2(-step_w, -step_h); 
+    offset[1]=vec2(0.0, -step_h); offset[2]= vec2(step_w, -step_h), 
+    offset[3]=vec2(-step_w, 0.0), offset[4]=vec2(0.0, 0.0), offset[5]=vec2(step_w, 0.0), 
+    offset[6]=vec2(-step_w, step_h), offset[7]=vec2(0.0, step_h), offset[8]=vec2(step_w, step_h); 
+    
+  // sobel filter - Gx
+  for (int i = 0; i < 9; i++) kernel[i]=0.0; 
+  kernel[0] = -1.0; kernel[2] = 1.0;
+  kernel[3] = -2.0; kernel[5] =  2.0;
+  kernel[6] = -1.0; kernel[8] = 1.0;
+
+    vec3 sumX= vec3(0.0); 
+    for (int i=0 ; i < 9; i++) { 
+      vec3 tmp=texture2D (texture, vUv+offset[i]).rgb; 
+        sumX += tmp*kernel[i]; 
+    }
+    
+  // sobel filter - Gy
+  for (int i = 0; i < 9; i++) kernel[i]=0.0; 
+  kernel[6] = -1.0; kernel[7] = -2.0; kernel[8] = -1.0;
+  kernel[0] = 1.0; kernel[1] = 2.0; kernel[2] = 1.0;
+
+    vec3 sumY= vec3(0.0); 
+    for (int i=0 ; i < 9; i++) { 
+      vec3 tmp=texture2D (texture, vUv+offset[i]).rgb; 
+        sumY += tmp*kernel[i]; 
+    }
+  vec3 delX = vec3 (1, 0, sumX);
+  vec3 delY = vec3 (0, 1, sumY);
+  vec3 n = normalize (cross (delX, delY));
+  
+  vec3 encode = (n + vec3 (1))/2.0;
+     
+    gl_FragColor = vec4 (encode, 1.0); 
+  }
+
+</script>
+
+
+  <script id="vs-texSwap" type="x-shader/x-vertex">
+    uniform int which; // 0, 1
+    varying vec2 vUv;
+    void main() {
+       gl_Position = projectionMatrix* modelViewMatrix * vec4( position, 1.0);
+       vUv = vec2 ((uv.s + float(which))/2., uv.t);
+    }
+  </script>
+  <script id="fs-texSwap" type="x-shader/x-fragment">
+    uniform sampler2D texture;
+    varying vec2 vUv;
+    void main() {
+      vec3 color = texture2D (texture, vUv).rgb;
+      gl_FragColor = vec4 (color, 1.0);
+    }
+  </script>
+
+
+
 <script>
 javascript:(function(){var script=document.createElement('script');script.onload=function(){var stats=new Stats();document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='https://mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);})()
 
@@ -161,7 +287,10 @@ var planeXX;
 var subject, subjectClone;
 var lamp,desk,pencilbox,book;
 var angle=0,pointLight,pointLight1;
+var shaderMaterial,which=0;
 
+var renderTargetNormal,sceneNormal,cameraNormal;
+var renderTargetSobel,sceneSobel,cameraSobel;
 init();
 animate();
 
@@ -281,9 +410,18 @@ function init() {
   tea.position.set(20,72,0);
   tea.rotation.y=-Math.PI/5;
   desk=builddesk();
-  book=buildbook();
   pencilbox=buildpencil();
-  sceneGrey.add (tea,book,floor,desk,pencilbox);
+  sceneGrey.add (tea,floor,desk,pencilbox);
+
+  var geometry = new THREE.PlaneBufferGeometry( 100,100 );
+  THREE.BufferGeometryUtils.computeTangents(geometry);
+
+  var wall = new THREE.Mesh(new THREE.PlaneGeometry(500,200), new THREE.MeshPhongMaterial({side:THREE.DoubleSide}));
+ sceneGrey.add(wall);
+ wall.position.set(0,100,-150.1);
+
+
+
   pointLight = new THREE.PointLight( 0xfffffff, 1, 1000 );
   pointLight.position.set( 10,150, 10 );
   sceneGrey.add( pointLight );
@@ -322,6 +460,113 @@ function init() {
   var plane0 = new THREE.Mesh (new THREE.PlaneGeometry(width, height), shaderMaterial);
   scene1.add (plane0);
   plane0.position.set (width/2, height/2, 0);
+
+
+  loader.crossOrigin = '';
+  let textureface = loader.load('https://i.imgur.com/v2vlWaR.png'); // normal map
+
+  sceneSobel = new THREE.Scene();
+  cameraSobel = new THREE.OrthographicCamera (-50,50,50,-50,-10,100);
+  sceneSobel.add(cameraSobel);
+  renderTargetSobel = new THREE.WebGLRenderTarget(512, 512);
+
+   var uniformsSobel = {
+    imageSize: {
+      type: 'v2',
+      value: new THREE.Vector2(256,256)
+    },
+    texture: {
+      type: 't',
+      value: textureface
+    } ,
+  };
+
+  var vertShader = document.getElementById('vs-sobel').textContent;
+  var fragShader = document.getElementById('fs-sobel').textContent;
+  
+  shaderMaterial = new THREE.ShaderMaterial({
+    uniforms: uniformsSobel,
+    vertexShader: vertShader,
+    fragmentShader: fragShader
+  });
+  var geometry = new THREE.PlaneGeometry(100,100);
+  let mesh = new THREE.Mesh (geometry, shaderMaterial)
+  sceneSobel.add (mesh);
+  
+  sceneNormal = new THREE.Scene();
+  cameraNormal = new THREE.OrthographicCamera (-50,50,50,-50,-10,100);
+
+
+  var geometry1 = new THREE.PlaneBufferGeometry( 100,100 );
+  THREE.BufferGeometryUtils.computeTangents(geometry1);
+
+  let normalTex = loader.load('https://i.imgur.com/nv73w3f.jpg'); // normal map
+
+  var uniformsnormal = {
+    imageSize: {
+      type: 'v2',
+      value: 512
+    },
+    tNormal: {
+      type: 't',
+      value: renderTargetSobel.texture
+    },
+    lightpos: {
+      type: 'v3',
+      value: new THREE.Vector3()
+    }
+  };
+
+  var vertShader = document.getElementById('vs-normalmap').textContent;
+  var fragShader = document.getElementById('fs-normalmap').textContent;
+
+  materialNormal = new THREE.ShaderMaterial({
+    uniforms: uniformsnormal,
+    vertexShader: vertShader,
+    fragmentShader: fragShader
+  });
+  let mesh2 = new THREE.Mesh (geometry1, materialNormal)
+
+  renderTargetNormal = new THREE.WebGLRenderTarget(512, 512);
+  renderTargetNormal.wrapS = THREE.RepeatWrapping;
+  let lightnormal = new THREE.AmbientLight(0xffffff, 1);
+  sceneNormal.add(cameraNormal, lightnormal, mesh2);
+  //////////////////////////////////////////////////////////////////////
+  var uniformsswicth = {
+    texture: {
+      type: 't',
+      value: renderTargetNormal
+    } ,
+    which: {
+      type: 'i',
+      value: 0
+    }
+  };
+
+  var vertShader = document.getElementById('vs-texSwap').textContent;
+  var fragShader = document.getElementById('fs-texSwap').textContent;
+  var materialswitch = new THREE.ShaderMaterial({
+    uniforms: uniformsswicth,
+    vertexShader: vertShader,
+    fragmentShader: fragShader
+  });
+  
+  /*let switchTex = loader.load(mickeys, function (tex) {
+    switchTex.wrapS = THREE.RepeatWrapping;
+    console.log (tex.image.width + ', ' + tex.image.height);
+    //material_switch.uniforms.texture.value= tex;
+  });  */
+
+  let plane = new THREE.Mesh (new THREE.PlaneGeometry(100,100), materialswitch);
+  scene.add (plane);
+  plane.position.set(0, 100, -150);
+
+  function incWhich() {
+    which += 1;
+    materialswitch.uniforms.which.value = which;
+    setTimeout (incWhich, 1000);
+  }
+  setTimeout (incWhich, 0);
 
 
 }
@@ -706,6 +951,7 @@ function animate() {
    angle += 0.01;
    pointLight.position.set (40*Math.cos(angle), 120, 40*Math.sin(angle));
    pointLight2.position.set (40*Math.cos(angle), 120, 40*Math.sin(angle));
+   materialNormal.uniforms.lightpos.value.copy (pointLight.position);
    if(camera.rotation.y>0){
   subjectClone.rotation.y = -camera.rotation.y;
   subject.rotation.y= -camera.rotation.y;}
@@ -713,19 +959,32 @@ function animate() {
     subjectClone.rotation.y = camera.rotation.y;
   subject.rotation.y= camera.rotation.y;
   }
-  material_shh.uniforms.imageSize.value = 60;
+  console.log(camera.rotation.y);
+   material_shh.uniforms.imageSize.value = 60;
   // this value can alter the width of silhouette !!
   // 1024: original width
   // 512, 256, 128, ...: wider silhouette
-  
+
   
   // scene0: torusKnot with shaderMaterial (draw eyeNormal)
+  renderer.setRenderTarget (renderTargetSobel);
+  renderer.clear();
+  renderer.render(sceneSobel, cameraSobel);
+  //
+  renderer.setRenderTarget (renderTargetNormal);
+  renderer.clear();
+  renderer.render(sceneNormal, cameraNormal);
+
+
   renderer.setRenderTarget (renderTarget);
   renderer.setClearColor (0x000000);
   renderer.clear();
   renderer.render (scene0, camera0);  // produce eyeNormal plot of subject
   
   // sceneRTT: fullQuad + filter (discard "near black" fragments)
+
+
+
   renderer.setRenderTarget (renderTarget_whole);
   renderer.setClearColor (0xffff00);  // yellow "magic" background ... to be cutout
   renderer.clear()
@@ -733,6 +992,10 @@ function animate() {
 
   // overlay the lit torusKnot
   renderer.render(sceneRegular, camera0); // camera0: the same as eyeNormal plot
+
+  renderer.setRenderTarget (renderTargetSobel);
+  renderer.clear();
+  renderer.render(sceneSobel, cameraSobel);
 
   ///////// final texture completed (except boundary removal)  
   planeXX.lookAt (camera.position.x, 25, camera.position.z);
@@ -759,6 +1022,7 @@ function animate() {
   });
   
   renderer.render(sceneGrey, camera);
+
 
   // switch to screen output    
   renderer.setRenderTarget (null);
@@ -788,51 +1052,6 @@ function animate() {
   
   // render sceneColor
   renderer.render(scene, camera);
-
-
-  /*renderer.setRenderTarget (renderTarget);
-  renderer.clear();  // clear the buffers of render target 
-  scene.traverse ( function (obj) {
-    if (obj instanceof THREE.Mesh) {
-       // handle mesh with materialArray
-       if (Array.isArray(obj.material)) {
-        obj.material.forEach (function(m){
-          m.colorWrite = true;
-        })
-       } else
-      obj.material.colorWrite = true;
-    }
-  });
-  
-  renderer.render(scene, camera);
-
-  // switch to screen output    
-  renderer.setRenderTarget (null);
-  renderer.clearColor();  // clear screen buffers
-  renderer.render(scene1, camera1);
-  
-  // set up blockers from sceneGrey (colorWrite is disabled)
-  // normalMat.colorWrite = false;
-  scene.traverse ( function (obj) {
-    if (obj instanceof THREE.Mesh) {
-       // handle mesh with materialArray
-       if (Array.isArray(obj.material)) {
-        obj.material.forEach (function(m){
-          m.colorWrite = false;
-        })
-       } else
-      obj.material.colorWrite = false;
-    }
-  });
-
-  renderer.render (scene, camera);
-  renderer.render (scene0, camera);*/
-
-
-
-  
-  // render sceneColor
-  //renderer.render(sceneRegular, camera);
 
   requestAnimationFrame(animate);
 }
